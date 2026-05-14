@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tryb · Game Rule Customization — System Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:      #ffffff;
+    --ink:     #0E1B2C;
+    --muted:   #5A6678;
+    --line:    #E1E6ED;
+    --accent:  #2B5DD9;
+    --green:   #1F9D55;
+    --orange:  #E0712B;
+    --purple:  #6B4FCF;
+    --red:     #D14D4D;
+    --gold:    #C99B22;
+    --pink:    #C9377F;
+    --bg-soft: #F7F9FC;
+  }
+  @page { size: A4 portrait; margin: 12mm; }
+  html, body {
+    background: var(--bg-soft);
+    color: var(--ink);
+    font-family: 'Poppins', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  body { padding: 24px 16px 80px; }
+  .page {
+    background: var(--bg);
+    max-width: 860px;
+    margin: 0 auto 22px;
+    padding: 34px 42px 38px;
+    border-radius: 14px;
+    box-shadow: 0 4px 30px rgba(14,27,44,0.07);
+    border: 1px solid var(--line);
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; margin-bottom: 0; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; border: none; max-width: none; margin: 0; padding: 0; border-radius: 0; }
+    .no-print { display: none !important; }
+  }
+
+  h1 { font-size: 27px; font-weight: 900; letter-spacing: -0.4px; margin-bottom: 3px; }
+  h2 {
+    font-size: 17px; font-weight: 800; margin: 22px 0 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .num {
+    display: inline-grid; place-items: center;
+    width: 26px; height: 26px;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; font-size: 13px; font-weight: 800;
+  }
+  h2.g  .num { background: var(--green); }
+  h2.o  .num { background: var(--orange); }
+  h2.p  .num { background: var(--purple); }
+  h2.r  .num { background: var(--red); }
+  h2.pk .num { background: var(--pink); }
+  h3 { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+  p, li { font-size: 12.5px; line-height: 1.6; color: var(--ink); }
+  .muted { color: var(--muted); }
+  .small { font-size: 11px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  ul.tidy { list-style: none; padding-left: 0; }
+  ul.tidy li { padding: 4px 0 4px 22px; position: relative; }
+  ul.tidy li::before {
+    content: ''; position: absolute; left: 6px; top: 13px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  }
+
+  /* Header */
+  .head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 13px; margin-bottom: 14px; gap: 18px;
+  }
+  .head .logo { display: flex; align-items: center; gap: 12px; }
+  .head .logo .icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    color: #fff; display: grid; place-items: center; font-size: 22px;
+  }
+  .head .meta { text-align: right; font-size: 10.5px; color: var(--muted); line-height: 1.55; }
+  .head .meta strong { color: var(--ink); }
+
+  /* Highlight / callout boxes */
+  .box {
+    border-radius: 10px; padding: 12px 16px; margin: 12px 0;
+    font-size: 12.5px;
+  }
+  .box .label {
+    font-size: 10px; letter-spacing: 1.4px; font-weight: 800;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .box.gold { background: #FFF8E5; border-left: 4px solid var(--gold); }
+  .box.gold .label { color: var(--gold); }
+  .box.green { background: #ECFAF1; border-left: 4px solid var(--green); }
+  .box.green .label { color: var(--green); }
+  .box.red { background: #FFF1F0; border-left: 4px solid var(--red); }
+  .box.red .label { color: var(--red); }
+  .box.blue { background: #EEF3FF; border-left: 4px solid var(--accent); }
+  .box.blue .label { color: var(--accent); }
+  .box.pink { background: #FFF0F6; border-left: 4px solid var(--pink); }
+  .box.pink .label { color: var(--pink); }
+
+  /* Code blocks */
+  .code {
+    background: #0F172A; color: #E2E8F0;
+    border-radius: 10px; padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; line-height: 1.7;
+    margin: 10px 0; overflow-x: auto;
+  }
+  .code .k { color: #FFD86B; }
+  .code .s { color: #98E8A0; }
+  .code .n { color: #FFB07A; }
+  .code .c { color: #6B7B95; font-style: italic; }
+  .code .b { color: #C8E1FF; font-weight: 700; }
+
+  /* Tables */
+  .tbl {
+    width: 100%; border-collapse: collapse; font-size: 11.5px; margin: 10px 0;
+  }
+  .tbl th, .tbl td {
+    padding: 8px 10px; border-bottom: 1px solid var(--line);
+    text-align: left; vertical-align: top;
+  }
+  .tbl th {
+    background: var(--bg-soft); font-weight: 800; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.8px; color: var(--accent);
+  }
+  .tbl tr:nth-child(even) td { background: #FAFBFD; }
+  .tbl .mono { font-size: 10.5px; }
+  .tag {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 9.5px; font-weight: 700;
+  }
+  .tag.range { background: rgba(43,93,217,0.12); color: var(--accent); }
+  .tag.def   { background: rgba(90,102,120,0.14); color: var(--muted); }
+  .tag.fast  { background: rgba(209,77,77,0.14); color: var(--red); }
+  .tag.slow  { background: rgba(31,157,85,0.14); color: var(--green); }
+  .tag.timed { background: rgba(224,113,43,0.14); color: var(--orange); }
+
+  /* Flow steps */
+  .flow { display: grid; gap: 10px; margin: 12px 0; }
+  .step {
+    display: grid; grid-template-columns: 44px 1fr; gap: 14px;
+    padding: 12px 14px; background: var(--bg-soft);
+    border: 1px solid var(--line); border-radius: 12px; align-items: center;
+    page-break-inside: avoid;
+  }
+  .step .n {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 900; font-size: 15px;
+    background: linear-gradient(135deg, var(--accent), var(--purple)); color: #fff;
+  }
+  .step h3 { margin: 0 0 3px; font-size: 13px; }
+  .step p  { margin: 0; font-size: 12px; color: var(--muted); }
+
+  /* Architecture pipeline */
+  .pipeline {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 8px; margin: 14px 0;
+  }
+  .pnode {
+    position: relative; text-align: center;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px 6px;
+  }
+  .pnode .emoji { font-size: 22px; display: block; margin-bottom: 6px; }
+  .pnode .lbl { font-size: 10.5px; font-weight: 800; }
+  .pnode .sub { font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .pnode + .pnode::before {
+    content: '→'; position: absolute; left: -11px; top: 50%;
+    transform: translateY(-50%); font-size: 16px; color: var(--accent);
+  }
+
+  /* The engine diagram */
+  .engine-bar {
+    margin: 14px 0; padding: 16px;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .track {
+    position: relative; height: 38px; border-radius: 10px;
+    background: linear-gradient(90deg, #D14D4D 0%, #6B4FCF 50%, #2B5DD9 100%);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 8px; overflow: hidden;
+  }
+  .track .edge-l, .track .edge-r {
+    font-size: 9px; font-weight: 800; color: #fff;
+    background: rgba(0,0,0,0.30); padding: 2px 6px; border-radius: 4px;
+  }
+  .track .cursor {
+    position: absolute; left: 46%; top: -3px; bottom: -3px;
+    width: 3px; background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8);
+  }
+  .track .actor-l { position: absolute; left: 30%; font-size: 20px; }
+  .track .actor-r { position: absolute; right: 30%; font-size: 20px; transform: scaleX(-1); }
+  .engine-bar .caption {
+    font-size: 10.5px; color: var(--muted); margin-top: 8px; text-align: center;
+  }
+
+  /* Variant catalogue cards */
+  .cat-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;
+  }
+  .cat {
+    border: 1px solid var(--line); border-radius: 11px;
+    padding: 11px 13px; background: #fff; page-break-inside: avoid;
+  }
+  .cat .top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .cat .emoji { font-size: 20px; }
+  .cat .nm { font-size: 12.5px; font-weight: 800; }
+  .cat .desc { font-size: 10.8px; color: var(--muted); line-height: 1.5; }
+  .cat .tune { margin-top: 6px; }
+
+  /* 2-col compare */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+  .col-card {
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+    background: var(--bg-soft);
+  }
+  .col-card h3 { font-size: 13px; }
+
+  /* Advantage cards */
+  .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+  .adv {
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px; background: #fff; page-break-inside: avoid;
+  }
+  .adv .ico {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: grid; place-items: center; font-size: 15px; margin-bottom: 7px;
+    background: rgba(43,93,217,0.1);
+  }
+  .adv h3 { font-size: 12.5px; margin-bottom: 3px; }
+  .adv p { font-size: 11px; color: var(--muted); }
+
+  .footer {
+    margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10.5px; color: var(--muted);
+  }
+  .footer .pill {
+    background: var(--bg-soft); padding: 3px 9px;
+    border-radius: 999px; border: 1px solid var(--line);
+  }
+
+  .print-bar { position: fixed; top: 16px; right: 16px; z-index: 100; }
+  .print-btn {
+    background: var(--accent); color: #fff; border: none;
+    padding: 11px 20px; border-radius: 10px; font-family: inherit;
+    font-weight: 700; font-size: 13px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(43,93,217,0.3);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .print-btn:hover { background: #1F4ABC; }
+
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .stat-pill {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    padding: 5px 12px; border-radius: 999px; font-size: 11px; color: var(--muted);
+  }
+  .stat-pill strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button class="print-btn" onclick="window.print()">
+    <span>🖨️</span><span>Print / Save PDF</span>
+  </button>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     PAGE 1 — Overview + Architecture + Schema
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="page">
+
+  <div class="head">
+    <div class="logo">
+      <div class="icon">⚙️</div>
+      <div>
+        <h1>Game Rule Customization</h1>
+        <p class="muted small">System design — one engine, infinitely many playable games</p>
+      </div>
+    </div>
+    <div class="meta">
+      <strong>Tryb · Next Task</strong><br>
+      Example: Ship Fight → Monkey Tug of War<br>
+      Builds on the variant pipeline
+    </div>
+  </div>
+
+  <div class="box gold">
+    <div class="label">★ The idea in one line</div>
+    <p>Today AI changes how a game <strong>looks</strong> (cosmetics). The next step: AI changes how a game <strong>plays</strong> — push speed, win distance, time limits. The same Ship Fight engine then powers a Monkey Tug of War, an Arm Wrestle, a Rocket Race… each a user-made variant created through chat.</p>
+  </div>
+
+  <h2 class="g"><span class="num">1</span> Where this fits</h2>
+  <p class="muted">The variant pipeline already exists. Every variant lives at <span class="mono">/gameLibrary/{id}</span>, carries a <span class="mono">cosmetic</span> blob, and its <span class="mono">variantId</span> already travels through matchmaking into the live match. <strong>Rule customization simply adds a second blob:</strong> <span class="mono">rules</span>.</p>
+
+  <div class="pill-row">
+    <div class="stat-pill"><strong>Done</strong> — cosmetic variants (4 games)</div>
+    <div class="stat-pill"><strong>Done</strong> — variantId in matchmaking</div>
+    <div class="stat-pill"><strong>Next</strong> — rules blob + engine reads it</div>
+  </div>
+
+  <h2 class="o"><span class="num">2</span> The Ship Fight engine — what it really is</h2>
+  <p class="muted">Strip away the ships and ocean and Ship Fight is a pure mechanic: <strong>two players, one position bar (0.0 – 1.0). Each tap nudges the bar toward your side. Reach the edge → you win.</strong> That's it. The "ships" are just a skin on top of this tug-of-position loop.</p>
+
+  <div class="engine-bar">
+    <div class="track">
+      <span class="edge-l">◄ LOSE EDGE</span>
+      <span class="actor-l">🐵</span>
+      <span class="cursor"></span>
+      <span class="actor-r">🐵</span>
+      <span class="edge-r">WIN EDGE ►</span>
+    </div>
+    <div class="caption">Same engine — here skinned as two monkeys pulling a rope. Tap fast → drag the cursor → push them off the edge.</div>
+  </div>
+
+  <div class="box blue">
+    <div class="label">Why this matters</div>
+    <p>Because the engine is abstract, <strong>any "two players fight along a line by tapping" idea is just a variant</strong> — a different skin + different rule numbers. No new engine, no new netcode. Monkey Tug of War is literally Ship Fight with a jungle skin and slightly heavier pulls.</p>
+  </div>
+
+  <h2 class="p"><span class="num">3</span> Architecture pipeline</h2>
+  <div class="pipeline">
+    <div class="pnode"><span class="emoji">💬</span><div class="lbl">AI Chat</div><div class="sub">user describes mode</div></div>
+    <div class="pnode"><span class="emoji">🧠</span><div class="lbl">Gemini</div><div class="sub">rules JSON draft</div></div>
+    <div class="pnode"><span class="emoji">🛡️</span><div class="lbl">Validate</div><div class="sub">clamp to safe ranges</div></div>
+    <div class="pnode"><span class="emoji">💾</span><div class="lbl">/gameLibrary</div><div class="sub">rules blob saved</div></div>
+    <div class="pnode"><span class="emoji">🎮</span><div class="lbl">Match Engine</div><div class="sub">reads variant rules</div></div>
+  </div>
+  <p class="muted small">The first four nodes already exist for cosmetics — we reuse them. Only the fifth changes: the server-side <span class="mono">submitShipTap</span> reads the variant's rules instead of the hardcoded config defaults.</p>
+
+  <h2 class="r"><span class="num">4</span> Ship Fight — customizable rules</h2>
+  <table class="tbl">
+    <thead>
+      <tr><th>Rule</th><th>What it does</th><th>Default</th><th>AI range</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono">pushPerTap</td>
+        <td>How far each tap moves the bar (push / pull strength)</td>
+        <td><span class="tag def">0.022</span></td>
+        <td><span class="tag range">0.010 – 0.040</span></td>
+      </tr>
+      <tr>
+        <td class="mono">winThreshold</td>
+        <td>How close to the edge counts as a win</td>
+        <td><span class="tag def">0.04</span></td>
+        <td><span class="tag range">0.02 – 0.10</span></td>
+      </tr>
+      <tr>
+        <td class="mono">maxTapRate</td>
+        <td>Max taps/sec the server accepts (anti-spam)</td>
+        <td><span class="tag def">15</span></td>
+        <td><span class="tag range">8 – 25</span></td>
+      </tr>
+      <tr>
+        <td class="mono">gameDurationSec</td>
+        <td>Time limit. 0 = classic sudden-death</td>
+        <td><span class="tag def">0</span></td>
+        <td><span class="tag range">0, or 15 – 60</span></td>
+      </tr>
+      <tr>
+        <td class="mono">comebackBoost</td>
+        <td>Losing player gets a small push multiplier</td>
+        <td><span class="tag def">true</span></td>
+        <td><span class="tag range">true / false</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="box red">
+    <div class="label">⚠ Hard safety rule</div>
+    <p>AI <strong>never</strong> writes a raw rule value into the database. Every field passes through a server-side validator that clamps it to the allowed range. A prompt like "make me win instantly" can only ever produce <span class="mono">winThreshold: 0.10</span> — the safe maximum — never something game-breaking. The server stays the single source of truth for the match.</p>
+  </div>
+
+  <div class="footer">
+    <span>Page 1 of 3 · Overview, engine & schema</span>
+    <span class="pill">Tryb · Rule Customization</span>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     PAGE 2 — One Engine Many Games + Monkey Tug of War JSON
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="page">
+
+  <div class="head">
+    <div class="logo">
+      <div class="icon" style="background: linear-gradient(135deg, var(--green), var(--accent));">🎯</div>
+      <div>
+        <h1>One Engine, Many Games</h1>
+        <p class="muted small">Every variant below is the same Ship Fight tap-race loop — only the skin & rules change</p>
+      </div>
+    </div>
+    <div class="meta">
+      No new engine code<br>
+      per game — ever
+    </div>
+  </div>
+
+  <h2 class="g"><span class="num">5</span> Games that fit the Ship Fight engine</h2>
+  <p class="muted small">Each card = a distinct game <em>concept</em> the community could create. Tags show which rule tuning makes it feel different.</p>
+
+  <div class="cat-grid">
+    <div class="cat">
+      <div class="top"><span class="emoji">🐵</span><span class="nm">Monkey Tug of War</span></div>
+      <div class="desc">Two monkeys pull a rope; drag the rival across the line.</div>
+      <div class="tune"><span class="tag slow">heavy pulls</span> <span class="tag def">low pushPerTap</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">⛵</span><span class="nm">Ship Fight (original)</span></div>
+      <div class="desc">Push the rival ship off the ocean's edge.</div>
+      <div class="tune"><span class="tag def">balanced defaults</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">💪</span><span class="nm">Arm Wrestle</span></div>
+      <div class="desc">Pin the opponent's hand flat to the table.</div>
+      <div class="tune"><span class="tag fast">short edge</span> <span class="tag range">low winThreshold</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🤼</span><span class="nm">Sumo Showdown</span></div>
+      <div class="desc">Shove the rival out of the dohyo ring.</div>
+      <div class="tune"><span class="tag slow">grindy</span> <span class="tag range">high winThreshold</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🚀</span><span class="nm">Rocket Race</span></div>
+      <div class="desc">Boost your rocket to the finish line first.</div>
+      <div class="tune"><span class="tag fast">fast</span> <span class="tag timed">timed</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🚜</span><span class="nm">Tractor Pull</span></div>
+      <div class="desc">Drag the heavy load further than your rival.</div>
+      <div class="tune"><span class="tag slow">very heavy</span> <span class="tag def">comeback off</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🐕</span><span class="nm">Dog Walk Dash</span></div>
+      <div class="desc">Two excited dogs pull their owners down the park.</div>
+      <div class="tune"><span class="tag fast">fast</span> <span class="tag timed">30s timer</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🧲</span><span class="nm">Magnet War</span></div>
+      <div class="desc">Out-magnetise the opponent and reel them in.</div>
+      <div class="tune"><span class="tag def">balanced</span> <span class="tag range">comeback on</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">⛄</span><span class="nm">Snowball Showdown</span></div>
+      <div class="desc">Roll the snowball over the rival's side.</div>
+      <div class="tune"><span class="tag slow">slow build</span></div>
+    </div>
+    <div class="cat">
+      <div class="top"><span class="emoji">🌋</span><span class="nm">Lava Tug</span></div>
+      <div class="desc">Pull the opponent into the lava pit to win.</div>
+      <div class="tune"><span class="tag fast">fast</span> <span class="tag range">short edge</span></div>
+    </div>
+  </div>
+
+  <div class="box pink">
+    <div class="label">★ The pattern</div>
+    <p>10 cards above = <strong>10 games, 0 new engines.</strong> Each is just <span class="mono">cosmetic</span> (skin) + <span class="mono">rules</span> (numbers) on the same tap-race loop. Slow + heavy → tug-of-war feel. Fast + timed → race feel. Short edge → quick brawl. The community can invent endless concepts inside these dials.</p>
+  </div>
+
+  <h2 class="o"><span class="num">6</span> Dummy JSON — "Monkey Tug of War" variant</h2>
+  <p class="muted small">User prompt: <em>"a jungle tug-of-war between two monkeys — make the pulls feel slow and heavy, and you need to really drag them far to win"</em></p>
+
+  <div class="code">
+<span class="c">// Stored at /gameLibrary/{newId}</span>
+{
+  <span class="k">"name"</span>: <span class="s">"Monkey Tug of War"</span>,
+  <span class="k">"baseGameId"</span>: <span class="s">"ship_fight"</span>,      <span class="c">// same engine!</span>
+  <span class="k">"creatorUid"</span>: <span class="s">"u_3xK9..."</span>,
+  <span class="k">"isOfficial"</span>: <span class="n">false</span>,
+  <span class="k">"createdAt"</span>: <span class="n">1715000000000</span>,
+
+  <span class="c">// Existing blob — looks (already shipped)</span>
+  <span class="k">"cosmetic"</span>: {
+    <span class="k">"emoji"</span>: <span class="s">"🐵"</span>,
+    <span class="k">"primaryColor"</span>: <span class="s">"#6B8E23"</span>,
+    <span class="k">"bgTheme"</span>: <span class="s">"magic"</span>,           <span class="c">// jungle-ish palette</span>
+    <span class="k">"arenaTitle"</span>: <span class="s">"MONKEY TUG OF WAR"</span>,
+    <span class="k">"tapButtonEmoji"</span>: <span class="s">"🪢"</span>,        <span class="c">// rope instead of ⚡</span>
+    <span class="k">"collisionEmoji"</span>: <span class="s">"💢"</span>
+  },
+
+  <span class="c">// NEW blob — gameplay rules</span>
+  <span class="k">"rules"</span>: {
+    <span class="k">"pushPerTap"</span>: <span class="n">0.014</span>,        <span class="c">// heavy, slow pulls (clamped)</span>
+    <span class="k">"winThreshold"</span>: <span class="n">0.09</span>,        <span class="c">// must drag them FAR</span>
+    <span class="k">"maxTapRate"</span>: <span class="n">14</span>,
+    <span class="k">"gameDurationSec"</span>: <span class="n">0</span>,           <span class="c">// no timer — pure endurance</span>
+    <span class="k">"comebackBoost"</span>: <span class="n">true</span>          <span class="c">// keeps it tense</span>
+  }
+}
+  </div>
+
+  <div class="box blue">
+    <div class="label">How the engine uses it</div>
+    <p>Two players join "Monkey Tug of War"; the match's <span class="mono">variantId</span> points to this entry. The server's <span class="mono">submitShipTap</span> reads <span class="mono">rules.pushPerTap</span> (0.014) and <span class="mono">rules.winThreshold</span> (0.09) instead of the defaults — so each tap pulls gently and you must drag the rival 90% of the track to win. The client renders 🐵 monkeys on a 🪢 rope. <strong>Same engine, same netcode — only the numbers and skin differ.</strong></p>
+  </div>
+
+  <div class="footer">
+    <span>Page 2 of 3 · Engine catalogue & dummy JSON</span>
+    <span class="pill">Tryb · Rule Customization</span>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     PAGE 3 — User Flow, Compare, Advantages
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="page">
+
+  <div class="head">
+    <div class="logo">
+      <div class="icon" style="background: linear-gradient(135deg, var(--orange), var(--pink));">🚦</div>
+      <div>
+        <h1>User Flow & Advantages</h1>
+        <p class="muted small">How a player turns Ship Fight into Monkey Tug of War</p>
+      </div>
+    </div>
+    <div class="meta">
+      Step-by-step<br>
+      + why this architecture wins
+    </div>
+  </div>
+
+  <h2 class="g"><span class="num">7</span> User flow — making the variant</h2>
+  <div class="flow">
+    <div class="step">
+      <div class="n">1</div>
+      <div><h3>Open AI Assistant → Customize Game → Ship Fight</h3>
+      <p>Same entry point as cosmetic customization — one chat handles both looks and rules.</p></div>
+    </div>
+    <div class="step">
+      <div class="n">2</div>
+      <div><h3>Describe the mode in plain words</h3>
+      <p>"A jungle tug-of-war between two monkeys — slow heavy pulls, drag them far to win." AI maps intent → skin + rule values.</p></div>
+    </div>
+    <div class="step">
+      <div class="n">3</div>
+      <div><h3>AI proposes + explains the trade-off</h3>
+      <p>"I'll set pushPerTap to 0.014 (heavy pulls) and winThreshold to 0.09 (long drag) — tense, endurance matches. 🐵 monkeys on a 🪢 rope, jungle palette. Add a timer?"</p></div>
+    </div>
+    <div class="step">
+      <div class="n">4</div>
+      <div><h3>AI refuses the impossible, offers alternatives</h3>
+      <p>"I can't make the rope physically stretch — the engine is a position bar. But heavy pulls + a long edge already feels exactly like a real tug-of-war."</p></div>
+    </div>
+    <div class="step">
+      <div class="n">5</div>
+      <div><h3>Preview + Apply</h3>
+      <p>Inline preview shows the skin + a rule summary ("🐌 Heavy pulls · 🎯 Long drag · ∞ No timer"). Tap Apply → <span class="mono">forkVariant</span> saves cosmetic + rules together.</p></div>
+    </div>
+    <div class="step">
+      <div class="n">6</div>
+      <div><h3>"Monkey Tug of War" goes live for everyone</h3>
+      <p>A new tile appears in every player's Game Library. Anyone taps it → normal matchmaking → the same engine runs with the custom skin and rules.</p></div>
+    </div>
+  </div>
+
+  <h2 class="p"><span class="num">8</span> Cosmetic vs Rule customization — same pipeline</h2>
+  <div class="cols">
+    <div class="col-card">
+      <h3>🎨 Cosmetic (done)</h3>
+      <ul class="tidy">
+        <li>Changes how the game <em>looks</em></li>
+        <li>emoji, colors, bg theme, SVG</li>
+        <li>Client-side render only</li>
+        <li>Zero risk to fairness</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h3>⚙️ Rules (next)</h3>
+      <ul class="tidy">
+        <li>Changes how the game <em>plays</em></li>
+        <li>push strength, win distance, timer</li>
+        <li>Server-enforced in match logic</li>
+        <li>Bounded — validator clamps all values</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2 class="r"><span class="num">9</span> Why this architecture wins</h2>
+  <div class="adv-grid">
+    <div class="adv">
+      <div class="ico" style="background:rgba(31,157,85,0.12);">♾️</div>
+      <h3>Infinite content, zero new code</h3>
+      <p>One engine + parameters = endless game modes. No engineer needed per variant — Monkey Tug of War shipped without touching the engine.</p>
+    </div>
+    <div class="adv">
+      <div class="ico" style="background:rgba(201,55,127,0.12);">👥</div>
+      <h3>User-generated game design</h3>
+      <p>Players become game designers. Each good variant is free, organic content + a reason to return.</p>
+    </div>
+    <div class="adv">
+      <div class="ico" style="background:rgba(43,93,217,0.12);">🛡️</div>
+      <h3>Server stays authoritative</h3>
+      <p>Rules are validated + clamped server-side. Anti-cheat is untouched — players can never inject values.</p>
+    </div>
+    <div class="adv">
+      <div class="ico" style="background:rgba(224,113,43,0.12);">🔁</div>
+      <h3>Reuses everything built</h3>
+      <p>variantId plumbing, /gameLibrary, forkVariant, the chat UI — all already shipped. Rules = just one more blob.</p>
+    </div>
+    <div class="adv">
+      <div class="ico" style="background:rgba(107,79,207,0.12);">📊</div>
+      <h3>Built-in A/B testing</h3>
+      <p>playCount per variant shows which rule sets are fun. Promote community winners to official modes.</p>
+    </div>
+    <div class="adv">
+      <div class="ico" style="background:rgba(201,155,34,0.12);">🚀</div>
+      <h3>Scales to every game</h3>
+      <p>Same pattern as cosmetics — add a rules schema per engine in one shared registry file.</p>
+    </div>
+  </div>
+
+  <div class="box green">
+    <div class="label">✓ Bottom line</div>
+    <p>Rule customization is a <strong>small, low-risk extension</strong> of an architecture already proven across 4 games. It adds one validated <span class="mono">rules</span> blob and one server-side read — and in return turns a single Ship Fight engine into an endlessly replayable catalogue: Monkey Tug of War, Arm Wrestle, Rocket Race, and whatever the community dreams up next.</p>
+  </div>
+
+  <div class="footer">
+    <span>Page 3 of 3 · Flow, comparison & advantages</span>
+    <span class="pill">Tryb confidential</span>
+  </div>
+</section>
+
+</body>
+</html>
