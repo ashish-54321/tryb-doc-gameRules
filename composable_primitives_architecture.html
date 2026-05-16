@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tryb · Composable Primitives Architecture — Phase 3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #ffffff;
+      --ink: #0E1B2C;
+      --muted: #5A6678;
+      --line: #E1E6ED;
+      --accent: #2B5DD9;
+      --green: #1F9D55;
+      --orange: #E0712B;
+      --purple: #6B4FCF;
+      --red: #D14D4D;
+      --gold: #C99B22;
+      --pink: #C9377F;
+      --bg-soft: #F7F9FC;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+
+    html,
+    body {
+      background: var(--bg-soft);
+      color: var(--ink);
+      font-family: 'Poppins', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    body {
+      padding: 24px 16px 80px;
+    }
+
+    .page {
+      background: var(--bg);
+      max-width: 880px;
+      margin: 0 auto 22px;
+      padding: 34px 42px 38px;
+      border-radius: 14px;
+      box-shadow: 0 4px 30px rgba(14, 27, 44, 0.07);
+      border: 1px solid var(--line);
+      page-break-after: always;
+    }
+
+    .page:last-child {
+      page-break-after: auto;
+      margin-bottom: 0;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .page {
+        box-shadow: none;
+        border: none;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        border-radius: 0;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -0.4px;
+      margin-bottom: 3px;
+    }
+
+    h2 {
+      font-size: 17px;
+      font-weight: 800;
+      margin: 22px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .num {
+      display: inline-grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    h2.g .num {
+      background: var(--green);
+    }
+
+    h2.o .num {
+      background: var(--orange);
+    }
+
+    h2.p .num {
+      background: var(--purple);
+    }
+
+    h2.r .num {
+      background: var(--red);
+    }
+
+    h2.pk .num {
+      background: var(--pink);
+    }
+
+    h2.go .num {
+      background: var(--gold);
+    }
+
+    h3 {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    p,
+    li {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--ink);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .small {
+      font-size: 11px;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    ul.tidy {
+      list-style: none;
+      padding-left: 0;
+    }
+
+    ul.tidy li {
+      padding: 4px 0 4px 22px;
+      position: relative;
+    }
+
+    ul.tidy li::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 13px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    ul.check li::before {
+      background: var(--green);
+    }
+
+    ul.cross li::before {
+      background: var(--red);
+    }
+
+    /* Header */
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--ink);
+      padding-bottom: 13px;
+      margin-bottom: 14px;
+      gap: 18px;
+    }
+
+    .head .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .head .logo .icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+    }
+
+    .head .meta {
+      text-align: right;
+      font-size: 10.5px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .head .meta strong {
+      color: var(--ink);
+    }
+
+    /* Boxes */
+    .box {
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-size: 12.5px;
+    }
+
+    .box .label {
+      font-size: 10px;
+      letter-spacing: 1.4px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .box.gold {
+      background: #FFF8E5;
+      border-left: 4px solid var(--gold);
+    }
+
+    .box.gold .label {
+      color: var(--gold);
+    }
+
+    .box.green {
+      background: #ECFAF1;
+      border-left: 4px solid var(--green);
+    }
+
+    .box.green .label {
+      color: var(--green);
+    }
+
+    .box.red {
+      background: #FFF1F0;
+      border-left: 4px solid var(--red);
+    }
+
+    .box.red .label {
+      color: var(--red);
+    }
+
+    .box.blue {
+      background: #EEF3FF;
+      border-left: 4px solid var(--accent);
+    }
+
+    .box.blue .label {
+      color: var(--accent);
+    }
+
+    .box.pink {
+      background: #FFF0F6;
+      border-left: 4px solid var(--pink);
+    }
+
+    .box.pink .label {
+      color: var(--pink);
+    }
+
+    .box.purple {
+      background: #F2EEFC;
+      border-left: 4px solid var(--purple);
+    }
+
+    .box.purple .label {
+      color: var(--purple);
+    }
+
+    /* Code */
+    .code {
+      background: #0F172A;
+      color: #E2E8F0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.7;
+      margin: 10px 0;
+      overflow-x: auto;
+    }
+
+    .code .k {
+      color: #FFD86B;
+    }
+
+    .code .s {
+      color: #98E8A0;
+    }
+
+    .code .n {
+      color: #FFB07A;
+    }
+
+    .code .c {
+      color: #6B7B95;
+      font-style: italic;
+    }
+
+    .code .b {
+      color: #C8E1FF;
+      font-weight: 700;
+    }
+
+    /* Tables */
+    .tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin: 10px 0;
+    }
+
+    .tbl th,
+    .tbl td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .tbl th {
+      background: var(--bg-soft);
+      font-weight: 800;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent);
+    }
+
+    .tbl tr:nth-child(even) td {
+      background: #FAFBFD;
+    }
+
+    .tbl .mono {
+      font-size: 10.5px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 700;
+    }
+
+    .tag.win {
+      background: rgba(31, 157, 85, 0.15);
+      color: var(--green);
+    }
+
+    .tag.lose {
+      background: rgba(209, 77, 77, 0.14);
+      color: var(--red);
+    }
+
+    .tag.now {
+      background: rgba(43, 93, 217, 0.14);
+      color: var(--accent);
+    }
+
+    .tag.before {
+      background: rgba(90, 102, 120, 0.18);
+      color: var(--muted);
+    }
+
+    .tag.next {
+      background: rgba(107, 79, 207, 0.14);
+      color: var(--purple);
+    }
+
+    /* Pipeline */
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .pnode {
+      position: relative;
+      text-align: center;
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 6px;
+    }
+
+    .pnode .emoji {
+      font-size: 22px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .pnode .lbl {
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .pnode .sub {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .pnode+.pnode::before {
+      content: '→';
+      position: absolute;
+      left: -11px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--accent);
+    }
+
+    /* Approach cards */
+    .approach {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 12px 0;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+
+    .approach.current {
+      border: 2px solid var(--green);
+      background: linear-gradient(180deg, #F4FCF7 0%, #fff 100%);
+      box-shadow: 0 2px 10px rgba(31, 157, 85, 0.08);
+    }
+
+    .approach.prev {
+      background: #FCFCFD;
+    }
+
+    .approach .top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .approach .badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .approach.current .badge {
+      background: var(--green);
+    }
+
+    .approach.prev .badge {
+      background: var(--muted);
+    }
+
+    .approach .title {
+      font-size: 14px;
+      font-weight: 800;
+      flex: 1;
+    }
+
+    .approach .status {
+      font-size: 9px;
+      letter-spacing: 1.2px;
+    }
+
+    .approach .desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .approach .cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .approach .pros,
+    .approach .cons {
+      background: var(--bg-soft);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .approach .pros {
+      background: #F0FAF4;
+    }
+
+    .approach .cons {
+      background: #FFF4F4;
+    }
+
+    .approach .pros h4,
+    .approach .cons h4 {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .approach .pros h4 {
+      color: var(--green);
+    }
+
+    .approach .cons h4 {
+      color: var(--red);
+    }
+
+    .approach .pros li,
+    .approach .cons li {
+      font-size: 11px;
+      padding: 2px 0 2px 14px;
+      position: relative;
+      list-style: none;
+      line-height: 1.4;
+    }
+
+    .approach .pros li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      color: var(--green);
+      font-weight: 900;
+      font-size: 10px;
+    }
+
+    .approach .cons li::before {
+      content: '✗';
+      position: absolute;
+      left: 0;
+      top: 1px;
+      color: var(--red);
+      font-weight: 900;
+      font-size: 10px;
+    }
+
+    /* Verdict cards */
+    .adv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .adv {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+
+    .adv .ico {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      margin-bottom: 7px;
+      background: rgba(43, 93, 217, 0.1);
+    }
+
+    .adv h3 {
+      font-size: 12.5px;
+      margin-bottom: 3px;
+    }
+
+    .adv p {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Decision matrix */
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin: 12px 0;
+    }
+
+    .matrix th,
+    .matrix td {
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .matrix th {
+      background: var(--bg-soft);
+      font-weight: 800;
+      font-size: 9.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+    }
+
+    .matrix td:first-child {
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .matrix .winner {
+      background: #ECFAF1;
+      font-weight: 800;
+    }
+
+    .score {
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .score.hi {
+      color: var(--green);
+    }
+
+    .score.mid {
+      color: var(--gold);
+    }
+
+    .score.lo {
+      color: var(--red);
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 22px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      color: var(--muted);
+    }
+
+    .footer .pill {
+      background: var(--bg-soft);
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+
+    /* Stat pills */
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+    }
+
+    .stat-pill {
+      background: var(--bg-soft);
+      border: 1px solid var(--line);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .stat-pill strong {
+      color: var(--ink);
+    }
+
+    .print-bar {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 100;
+    }
+
+    .print-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 11px 20px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(43, 93, 217, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .print-btn:hover {
+      background: #1F4ABC;
+    }
+
+    /* Modifier card grid */
+    .mod-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .mod {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+
+    .mod .top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .mod .emoji {
+      font-size: 18px;
+    }
+
+    .mod .nm {
+      font-size: 12.5px;
+      font-weight: 800;
+    }
+
+    .mod .desc {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- <div class="print-bar no-print">
+  <button class="print-btn" onclick="window.print()">
+    <span>🖨️</span><span>Print / Save PDF</span>
+  </button>
+</div> -->
+
+  <!-- ════════════════════════════════════════════════════════════════════
+     PAGE 1 — What we built (Phase 3 recap) + current architecture
+     ════════════════════════════════════════════════════════════════════ -->
+  <section class="page">
+
+    <div class="head">
+      <div class="logo">
+        <div class="icon">🧩</div>
+        <div>
+          <h1>Composable Primitives Architecture</h1>
+          <p class="muted small">Phase 3 — making Ship Fight infinitely customizable without parameter explosion</p>
+        </div>
+      </div>
+      <div class="meta">
+        <strong>Tryb · System Design</strong><br>
+        Approach comparison &amp; rationale<br>
+        4 starter modifiers shipped
+      </div>
+    </div>
+
+    <div class="box gold">
+      <div class="label">★ The problem we solved</div>
+      <p>Phase 1 &amp; 2 added <strong>fixed parameters</strong> (cosmetic fields, rule numbers, arena layout). Every
+        new user idea required a developer to add a new parameter. Once user creativity outpaced the schema, requests
+        started getting denied: <em>"engine doesn't support that."</em> Phase 3 replaces this with a <strong>plug-in
+          primitive system</strong> — AI composes behaviors from a registered library, and adding new ones is a
+        single-file change.</p>
+    </div>
+
+    <h2 class="g"><span class="num">1</span> What was shipped — the <span class="mono">logic</span> blob</h2>
+    <p class="muted small">A third typed blob alongside <span class="mono">cosmetic</span> + <span
+        class="mono">rules</span> at <span class="mono">/gameLibrary/{id}</span>. Holds a list of <strong>modifier
+        primitives</strong> that the engine applies per tap.</p>
+
+    <div class="code">
+      <span class="c">// New field on every Ship Fight variant entry</span>
+      <span class="k">"logic"</span>: {
+      <span class="k">"modifiers"</span>: [
+      { <span class="k">"type"</span>: <span class="s">"fatigue"</span>, <span class="k">"params"</span>: { <span
+        class="k">"decayRate"</span>: <span class="n">0.85</span>, <span class="k">"minMultiplier"</span>: <span
+        class="n">0.4</span>, <span class="k">"recoveryMs"</span>: <span class="n">1500</span> } },
+      { <span class="k">"type"</span>: <span class="s">"momentum"</span>, <span class="k">"params"</span>: { <span
+        class="k">"boostPerStreak"</span>: <span class="n">0.05</span>, <span class="k">"maxBoost"</span>: <span
+        class="n">1.5</span>, <span class="k">"windowMs"</span>: <span class="n">250</span> } },
+      { <span class="k">"type"</span>: <span class="s">"streakBonus"</span>, <span class="k">"params"</span>: { <span
+        class="k">"every"</span>: <span class="n">10</span>, <span class="k">"multiplier"</span>: <span
+        class="n">2.0</span> } }
+      ]
+      }
+    </div>
+
+    <h2 class="o"><span class="num">2</span> The 4 starter modifier primitives</h2>
+    <div class="mod-grid">
+      <div class="mod">
+        <div class="top"><span class="emoji">🥵</span><span class="nm">fatigue</span></div>
+        <div class="desc">Rapid spam drains a per-player <em>energy</em> meter; rest recovers it. Push effectiveness
+          scales with energy. Endurance feel.</div>
+      </div>
+      <div class="mod">
+        <div class="top"><span class="emoji">⚡</span><span class="nm">momentum</span></div>
+        <div class="desc">Consecutive fast taps (within a window) build a multiplier up to a cap. Rewards rhythm.</div>
+      </div>
+      <div class="mod">
+        <div class="top"><span class="emoji">🔥</span><span class="nm">streakBonus</span></div>
+        <div class="desc">Every Nth consecutive tap deals a big bonus push. Combo feel.</div>
+      </div>
+      <div class="mod">
+        <div class="top"><span class="emoji">💥</span><span class="nm">panicBurst</span></div>
+        <div class="desc">When pushed close to losing, opens a brief boosted-push window. Drama / comeback.</div>
+      </div>
+    </div>
+
+    <h2 class="p"><span class="num">3</span> Data flow</h2>
+    <div class="pipeline">
+      <div class="pnode"><span class="emoji">💬</span>
+        <div class="lbl">AI Chat</div>
+        <div class="sub">user prompt</div>
+      </div>
+      <div class="pnode"><span class="emoji">🧠</span>
+        <div class="lbl">Gemini</div>
+        <div class="sub">picks 0–3 modifiers</div>
+      </div>
+      <div class="pnode"><span class="emoji">🛡️</span>
+        <div class="lbl">Registry</div>
+        <div class="sub">validate + clamp</div>
+      </div>
+      <div class="pnode"><span class="emoji">💾</span>
+        <div class="lbl">/gameLibrary</div>
+        <div class="sub">logic blob saved</div>
+      </div>
+      <div class="pnode"><span class="emoji">⚙️</span>
+        <div class="lbl">Engine</div>
+        <div class="sub">applies each tap</div>
+      </div>
+    </div>
+    <p class="muted small">Snapshot pattern unchanged: when a match starts, <span class="mono">game_builder</span> reads
+      <span class="mono">/gameLibrary/{variantId}/logic</span> once and writes it into <span
+        class="mono">/games/{matchId}/logic</span>. The tap handler only ever reads the match node.</p>
+
+    <h2 class="r"><span class="num">4</span> 5-layer safety</h2>
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>What it stops</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">Schema</td>
+          <td>Gemini can only emit registered modifier types (validated against enum).</td>
+        </tr>
+        <tr>
+          <td class="mono">Registry whitelist</td>
+          <td>Unknown <span class="mono">type</span> values are silently dropped server-side.</td>
+        </tr>
+        <tr>
+          <td class="mono">Param clamps</td>
+          <td>Every numeric param clamped to a per-primitive safe range.</td>
+        </tr>
+        <tr>
+          <td class="mono">Count cap</td>
+          <td>Max 3 modifiers per variant; duplicates deduped.</td>
+        </tr>
+        <tr>
+          <td class="mono">Composition cap</td>
+          <td>Final composed multiplier hard-clamped to 0.1× – 4× per tap.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pill-row">
+      <div class="stat-pill"><strong>Server</strong> — 6 files touched</div>
+      <div class="stat-pill"><strong>Client</strong> — 4 files touched</div>
+      <div class="stat-pill"><strong>New modifier</strong> — 1-file change</div>
+      <div class="stat-pill"><strong>Anti-cheat</strong> — server-authoritative</div>
+    </div>
+
+    <div class="footer">
+      <span>Page 1 of 3 · What shipped &amp; current architecture</span>
+      <span class="pill">Tryb · Composable Primitives</span>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+     PAGE 2 — All approaches considered, pros &amp; cons
+     ════════════════════════════════════════════════════════════════════ -->
+  <section class="page">
+
+    <div class="head">
+      <div class="logo">
+        <div class="icon" style="background: linear-gradient(135deg, var(--orange), var(--gold));">🛣️</div>
+        <div>
+          <h1>The 5 Approaches We Compared</h1>
+          <p class="muted small">From rigid fixed schema to free-form code generation — what we considered</p>
+        </div>
+      </div>
+      <div class="meta">
+        Trade-off analysis<br>
+        Safety vs flexibility vs cost
+      </div>
+    </div>
+
+    <!-- Approach 1: Fixed Schema (previous) -->
+    <div class="approach prev">
+      <div class="top">
+        <div class="badge">1</div>
+        <div class="title">Fixed Parameter Schema <span class="tag before">PREVIOUS</span></div>
+      </div>
+      <div class="desc">Every customizable thing is a named field with a fixed type. Developer adds a parameter; AI
+        fills it. <strong>Used in Phase 1 &amp; 2</strong> (cosmetic fields, rules, arenaLayout).</div>
+      <div class="cols">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Strongly typed end-to-end — IDE autocomplete, refactor-safe</li>
+            <li>Trivially server-validated — clamp/enum each field</li>
+            <li>Engine rendering predictable — no surprise inputs</li>
+            <li>Zero risk to anti-cheat</li>
+            <li>Easy to debug — flat shape</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li><strong>Hard ceiling</strong> — anything not in schema is impossible</li>
+            <li>Each new idea = developer task + redeploy</li>
+            <li>Schema grows monotonically — no easy way to remove unused fields</li>
+            <li>User intent often doesn't fit a single field</li>
+            <li>Combinatorial explosion as variants grow</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approach 2: Composable Primitives (current) -->
+    <div class="approach current">
+      <div class="top">
+        <div class="badge">2</div>
+        <div class="title">Composable Primitives <span class="tag now">CURRENT · RECOMMENDED</span></div>
+      </div>
+      <div class="desc">A registry of typed primitives ("Lego blocks") — modifiers, layouts, win conditions. AI picks
+        &amp; configures combinations. <strong>Used from Phase 3 onward.</strong></div>
+      <div class="cols">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Adding a new primitive = 1-file change</li>
+            <li>AI composes infinite combinations from finite blocks</li>
+            <li>Each primitive independently typed + validated</li>
+            <li>Server stays fully authoritative (whitelist + clamps)</li>
+            <li>Engine logic stays explicit — no interpreter to maintain</li>
+            <li>Variants degrade gracefully — unknown primitives dropped</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Still bounded by the registry — exotic ideas still need a dev</li>
+            <li>Modifier interactions need thought (multiplicative stacking)</li>
+            <li>Per-primitive scratchpad adds RTDB writes per tap</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approach 3: DSL -->
+    <div class="approach">
+      <div class="top">
+        <div class="badge">3</div>
+        <div class="title">Domain-Specific Language (DSL) <span class="tag next">FUTURE OPTION</span></div>
+      </div>
+      <div class="desc">AI emits a small declarative "rules program" — events, conditions, effects. Engine has an
+        interpreter that runs it inside a sandbox.</div>
+      <div class="cols">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Maximum flexibility — AI can express genuinely new mechanics</li>
+            <li>Compose conditions/effects orthogonally</li>
+            <li>Engine becomes a generic runtime for many game styles</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Interpreter complexity — 3–4 weeks of engineering</li>
+            <li>Edge cases / infinite loops need timeout enforcement</li>
+            <li>Debugging emergent bugs is painful</li>
+            <li>Mobile CPU overhead for interpretation</li>
+            <li>AI failure modes harder to predict</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approach 4: Sandbox code generation -->
+    <div class="approach">
+      <div class="top">
+        <div class="badge">4</div>
+        <div class="title">AI-generated Sandbox Code <span class="tag lose">NOT RECOMMENDED</span></div>
+      </div>
+      <div class="desc">AI writes actual JavaScript/Lua that the engine sandboxes and executes per tap.</div>
+      <div class="cols">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Theoretically unlimited expressiveness</li>
+            <li>One mechanism handles every game ever conceived</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li><strong>Anti-cheat collapses</strong> — server can no longer reason about game state</li>
+            <li>Sandbox escapes are an ongoing security war</li>
+            <li>Mobile performance hit (V8 / interpreter startup)</li>
+            <li>Code review impossible at scale — content moderation nightmare</li>
+            <li>Cost: every match runs LLM-generated code → unpredictable bills</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approach 5: Template library -->
+    <div class="approach">
+      <div class="top">
+        <div class="badge">5</div>
+        <div class="title">Curated Template Library <span class="tag before">ALTERNATIVE</span></div>
+      </div>
+      <div class="desc">Engineers ship a fixed set of "game templates" (Tug of War, Race, Brawl…). AI's only job is to
+        pick a template + tune its few exposed knobs.</div>
+      <div class="cols">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Each template hand-tuned for great feel</li>
+            <li>Simplest possible safety story</li>
+            <li>Onboarding/UX easier (browseable catalog)</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Limited variety — capped at N templates</li>
+            <li>Doesn't scale with community creativity</li>
+            <li>Two templates = effectively two engines to maintain</li>
+            <li>Hybrid ideas (race + comeback boost?) fall through cracks</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span>Page 2 of 3 · Approaches compared</span>
+      <span class="pill">Tryb · Composable Primitives</span>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+     PAGE 3 — Decision matrix, why we won, future roadmap
+     ════════════════════════════════════════════════════════════════════ -->
+  <section class="page">
+
+    <div class="head">
+      <div class="logo">
+        <div class="icon" style="background: linear-gradient(135deg, var(--green), var(--accent));">🏆</div>
+        <div>
+          <h1>Why Composable Primitives Wins</h1>
+          <p class="muted small">Decision matrix + the future expansion roadmap</p>
+        </div>
+      </div>
+      <div class="meta">
+        Scored 5 approaches<br>
+        Safety + flexibility + cost
+      </div>
+    </div>
+
+    <h2 class="go"><span class="num">5</span> Decision matrix</h2>
+    <p class="muted small">Each approach scored on the 5 axes that matter for this app. <strong>Higher =
+        better.</strong></p>
+
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>Flexibility</th>
+          <th>Safety</th>
+          <th>Engine cost</th>
+          <th>Build cost</th>
+          <th>Extensibility</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1. Fixed Schema</td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score mid">17</span></td>
+        </tr>
+        <tr class="winner">
+          <td>2. Composable Primitives ⭐</td>
+          <td><span class="score hi">4</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">4</span></td>
+          <td><span class="score hi">4</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">22</span></td>
+        </tr>
+        <tr>
+          <td>3. DSL</td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score mid">3</span></td>
+          <td><span class="score mid">2</span></td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score mid">16</span></td>
+        </tr>
+        <tr>
+          <td>4. Sandbox Code</td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score lo">1</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score lo">13</span></td>
+        </tr>
+        <tr>
+          <td>5. Template Library</td>
+          <td><span class="score lo">2</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">5</span></td>
+          <td><span class="score hi">4</span></td>
+          <td><span class="score lo">2</span></td>
+          <td><span class="score mid">18</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box green">
+      <div class="label">✓ Verdict</div>
+      <p>Composable Primitives is the <strong>only approach that scores high on all 5 axes simultaneously</strong>. It
+        keeps the safety story of fixed schema (whitelist + clamp), the extensibility of a DSL (1-file primitive
+        additions), and the engine cost of a template library (explicit branches, no interpreter overhead). DSL is a
+        tempting future jump but premature today — our biggest constraint is user-demand signal, not engine flexibility.
+      </p>
+    </div>
+
+    <h2 class="p"><span class="num">6</span> Why this architecture wins</h2>
+    <div class="adv-grid">
+      <div class="adv">
+        <div class="ico" style="background:rgba(31,157,85,0.12);">♾️</div>
+        <h3>Finite blocks, infinite combos</h3>
+        <p>4 modifiers × 0–3 per variant = thousands of feel combinations from one engine.</p>
+      </div>
+      <div class="adv">
+        <div class="ico" style="background:rgba(201,55,127,0.12);">🛡️</div>
+        <h3>Server stays the source of truth</h3>
+        <p>Every primitive is registered, validated, clamped. AI literally cannot inject behavior we didn't pre-approve.
+        </p>
+      </div>
+      <div class="adv">
+        <div class="ico" style="background:rgba(43,93,217,0.12);">📂</div>
+        <h3>Adding a primitive = 1 file</h3>
+        <p>Schema + validator + apply function — one entry in <span class="mono">MODIFIER_PRIMITIVES</span>. AI system
+          prompt updates automatically.</p>
+      </div>
+      <div class="adv">
+        <div class="ico" style="background:rgba(224,113,43,0.12);">🔁</div>
+        <h3>Backwards-compatible by default</h3>
+        <p>Variants without a logic blob behave exactly like classic Ship Fight. Unknown primitive types in old data are
+          silently dropped.</p>
+      </div>
+      <div class="adv">
+        <div class="ico" style="background:rgba(107,79,207,0.12);">📊</div>
+        <h3>Analytics-friendly</h3>
+        <p>Which primitives drive retention? Trivial to A/B test — they're typed and counted in RTDB.</p>
+      </div>
+      <div class="adv">
+        <div class="ico" style="background:rgba(201,155,34,0.12);">🚀</div>
+        <h3>DSL is still on the table</h3>
+        <p>If user creativity ever outruns this registry, we can ship a DSL <em>on top</em> of the primitives — they
+          remain the safe runtime.</p>
+      </div>
+    </div>
+
+    <h2 class="r"><span class="num">7</span> Roadmap — future primitive axes</h2>
+    <p class="muted small">Same pattern, more axes. Each is a separate registry file + a Ship Fight spec entry.</p>
+
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Axis</th>
+          <th>Examples</th>
+          <th>Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="mono">tapEffect.type</td>
+          <td><span class="tag">push_self</span> <span class="tag">pull_opponent</span> <span
+              class="tag">charge_meter</span> <span class="tag">drain_opponent</span></td>
+          <td>~1 day</td>
+        </tr>
+        <tr>
+          <td class="mono">winCondition.type</td>
+          <td><span class="tag">push_off</span> <span class="tag">cross_line</span> <span
+              class="tag">score_target</span> <span class="tag">time_attack</span></td>
+          <td>~2 days</td>
+        </tr>
+        <tr>
+          <td class="mono">zones[]</td>
+          <td><span class="tag">safe_zone</span> <span class="tag">boost_zone</span> <span
+              class="tag">danger_zone</span> (anywhere on position bar)</td>
+          <td>~2 days</td>
+        </tr>
+        <tr>
+          <td class="mono">connector.style</td>
+          <td><span class="tag">rope</span> <span class="tag">chain</span> <span class="tag">magnet</span> <span
+              class="tag">none</span></td>
+          <td>~half day</td>
+        </tr>
+        <tr>
+          <td class="mono">modifiers (more)</td>
+          <td><span class="tag">double_taps</span> <span class="tag">reverse_chaos</span> <span
+              class="tag">heatmeter</span> <span class="tag">shield</span></td>
+          <td>~2 hours each</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box blue">
+      <div class="label">★ Bottom line</div>
+      <p>We moved from <strong>"what does the developer let you do"</strong> to <strong>"what can the developer's blocks
+          compose into."</strong> The ceiling didn't disappear — it just got pushed far higher, and now it raises by
+        adding files instead of editing every existing file. When a future user idea hits the new ceiling, we add one
+        more primitive instead of redesigning the engine.</p>
+    </div>
+
+    <div class="footer">
+      <span>Page 3 of 3 · Decision matrix &amp; roadmap</span>
+      <span class="pill">Tryb confidential</span>
+    </div>
+  </section>
+
+</body>
+
+</html>
