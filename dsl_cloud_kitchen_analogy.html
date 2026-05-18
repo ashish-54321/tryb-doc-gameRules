@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>DSL Architecture — Cloud Kitchen Analogy (Hinglish)</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-2: #1e293b;
+    --bg-3: #111827;
+    --fg: #e2e8f0;
+    --mute: #94a3b8;
+    --accent: #06b6d4;
+    --accent-2: #a259ff;
+    --good: #22c55e;
+    --warn: #f59e0b;
+    --bad:  #ef4444;
+    --orange: #f97316;
+    --line: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+    font-size: 15px;
+  }
+  .wrap {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg-3);
+    border-right: 1px solid var(--line);
+    padding: 22px 18px;
+  }
+  nav.toc h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--mute);
+    margin: 0 0 12px;
+  }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; margin-bottom: 4px; }
+  nav.toc a {
+    color: var(--fg);
+    text-decoration: none;
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
+  nav.toc a::before {
+    content: counter(toc) ". ";
+    color: var(--orange);
+    font-weight: 700;
+  }
+  nav.toc a:hover {
+    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange);
+  }
+  main {
+    padding: 36px 42px 80px;
+    max-width: 980px;
+  }
+  h1 {
+    font-size: 32px;
+    margin: 0 0 4px;
+    background: linear-gradient(90deg, #f97316, #a259ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { color: var(--mute); margin-bottom: 30px; font-size: 14px; }
+  h2 {
+    font-size: 22px;
+    margin: 38px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  h3 { font-size: 17px; color: var(--orange); margin: 24px 0 8px; }
+  h4 { font-size: 14.5px; color: var(--accent-2); margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+  p { margin: 8px 0; }
+  code, pre {
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+  }
+  code {
+    background: rgba(249, 115, 22, 0.12);
+    color: var(--orange);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  pre code { background: none; color: var(--fg); padding: 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  th { background: var(--bg-2); color: var(--orange); font-weight: 700; }
+  tr:hover td { background: rgba(249, 115, 22, 0.04); }
+  .callout {
+    border-left: 4px solid var(--orange);
+    background: rgba(249, 115, 22, 0.08);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 14px 0;
+  }
+  .analogy {
+    border: 2px dashed var(--orange);
+    background: rgba(249, 115, 22, 0.06);
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin: 18px 0;
+    font-size: 14.5px;
+  }
+  .analogy::before {
+    content: "🍳  Food Analogy";
+    display: block;
+    color: var(--orange);
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+  /* Building floors */
+  .building {
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .floor {
+    padding: 18px 22px;
+    border-bottom: 2px dashed var(--line);
+  }
+  .floor:last-child { border-bottom: none; }
+  .floor-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .floor-num {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+  }
+  .floor-1 .floor-num { background: rgba(34, 197, 94, 0.2); color: var(--good); }
+  .floor-2 .floor-num { background: rgba(249, 115, 22, 0.2); color: var(--orange); }
+  .floor-3 .floor-num { background: rgba(162, 89, 255, 0.2); color: var(--accent-2); }
+  .floor-title {
+    font-weight: 800;
+    font-size: 17px;
+  }
+  .floor-sub { font-size: 12.5px; color: var(--mute); letter-spacing: 0.5px; }
+
+  /* Flow steps */
+  .flow {
+    display: grid;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-2);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent);
+    align-items: center;
+  }
+  .flow-step .step-num {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent);
+  }
+
+  /* Brand cards */
+  .brands {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .brand {
+    background: var(--bg-2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+  }
+  .brand-name {
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .brand-pizza   { border-top: 4px solid #f59e0b; }
+  .brand-biryani { border-top: 4px solid #ef4444; }
+  .brand-sushi   { border-top: 4px solid #06b6d4; }
+  .brand-tandoor { border-top: 4px solid #a259ff; }
+  .brand-burger  { border-top: 4px solid #22c55e; }
+
+  /* Yes/No marks */
+  .mark { font-size: 16px; }
+  .mark-yes { color: var(--good); }
+  .mark-no  { color: var(--bad);  }
+
+  .file-tree {
+    background: var(--bg-3);
+    border-left: 3px solid var(--orange);
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: "Fira Code", monospace;
+    font-size: 13px;
+    color: var(--fg);
+    white-space: pre;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  .tree-comment { color: var(--mute); font-style: italic; }
+  .tree-shared  { color: var(--good); }
+  .tree-brand   { color: var(--orange); }
+  hr { border: none; border-top: 1px dashed var(--line); margin: 30px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ────────────────  TOC  ──────────────── -->
+<nav class="toc">
+  <h2>Sections</h2>
+  <ol>
+    <li><a href="#intro">Cloud Kitchen Setup</a></li>
+    <li><a href="#building">Building Ka Structure</a></li>
+    <li><a href="#floor-1">Floor 1 — Shared Kitchen</a></li>
+    <li><a href="#floor-2">Floor 2 — Per-Brand Menus</a></li>
+    <li><a href="#floor-3">Floor 3 — Server Inspector</a></li>
+    <li><a href="#flow">Kaise Sab Milkar Kaam Karte Hain</a></li>
+    <li><a href="#reuse">Reuse Rules — Kaun Kya Use Kare</a></li>
+    <li><a href="#final-tree">Final Folder Structure</a></li>
+    <li><a href="#practical">Practical Implications</a></li>
+    <li><a href="#summary">Ek Line Mein Summary</a></li>
+  </ol>
+</nav>
+
+<!-- ────────────────  MAIN  ──────────────── -->
+<main>
+
+<h1>🍳 DSL Architecture — Cloud Kitchen Wali Kahani</h1>
+<div class="sub">All games migrated honge to kaise kaam karega — Hinglish food analogy + file structure</div>
+
+<!-- ============================================================ -->
+<h2 id="intro">1. Cloud Kitchen Setup — Imagine Karo</h2>
+
+<div class="analogy">
+  Soch lo ek <strong>bada cloud kitchen building</strong> hai jisme <strong>5 alag-alag brands</strong> ek hi jagah se khana banate hain:
+  <div class="brands">
+    <div class="brand brand-pizza"><div class="brand-name">🍕 Pizza Hut</div><div style="font-size:11px; color: var(--mute)">= Wordle</div></div>
+    <div class="brand brand-biryani"><div class="brand-name">🍛 Biryani House</div><div style="font-size:11px; color: var(--mute)">= Ship Fight</div></div>
+    <div class="brand brand-sushi"><div class="brand-name">🍣 Sushi Express</div><div style="font-size:11px; color: var(--mute)">= Red Flag</div></div>
+    <div class="brand brand-tandoor"><div class="brand-name">🍢 Tandoori Tales</div><div style="font-size:11px; color: var(--mute)">= Emoji Guess</div></div>
+    <div class="brand brand-burger"><div class="brand-name">🍔 Burger King</div><div style="font-size:11px; color: var(--mute)">= Tic Tac Toe</div></div>
+  </div>
+  Saara setup ek <strong>shared kitchen</strong> mein hai, lekin har brand ka apna <strong>alag menu</strong> hai.
+</div>
+
+<p>Yahi structure tumhare <strong>DSL approach</strong> ka hai — <strong>5 games ek shared engine pe chalte hain</strong>, lekin har ek ka apna unique flavor (events, actions, fields) hai.</p>
+
+<div class="callout">
+  <strong>Key insight:</strong> Common infrastructure ek baar banao, fir har brand uska fayda uthata hai bina apne menu pe compromise kiye.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="building">2. Building Ka Structure</h2>
+
+<p>Building mein <strong>3 floors</strong> hain. Niche se upar chalte hain:</p>
+
+<div class="building">
+
+  <div class="floor floor-1">
+    <div class="floor-header">
+      <div class="floor-num">G</div>
+      <div>
+        <div class="floor-title">Ground Floor — Shared Kitchen</div>
+        <div class="floor-sub">Universal infrastructure • Sab brands use karte hain</div>
+      </div>
+    </div>
+    <p>Stove, gas, knives, timer, plates — <strong>ek baar banta hai, sab share karte hain</strong>.</p>
+  </div>
+
+  <div class="floor floor-2">
+    <div class="floor-header">
+      <div class="floor-num">1</div>
+      <div>
+        <div class="floor-title">First Floor — Per-Brand Menus</div>
+        <div class="floor-sub">Har brand ka apna menu card</div>
+      </div>
+    </div>
+    <p>Pizza Hut ka apna menu, Biryani House ka apna menu — <strong>brand-specific recipes + ingredients</strong>.</p>
+  </div>
+
+  <div class="floor floor-3">
+    <div class="floor-header">
+      <div class="floor-num">2</div>
+      <div>
+        <div class="floor-title">Second Floor — FSSAI Inspector (Server)</div>
+        <div class="floor-sub">Quality control • Har dish check hoti hai</div>
+      </div>
+    </div>
+    <p>Customer ke ghar pahunchne se pehle har order inspect hota hai. Cheating-proof.</p>
+  </div>
+
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="floor-1">3. Floor 1 — Shared Kitchen (Generic DSL Core)</h2>
+
+<p>Yeh sabki <strong>common infrastructure</strong> hai. Sab brands isko use karte hain.</p>
+
+<div class="file-tree">lib/dsl/                              <span class="tree-comment">← Ground floor (shared)</span>
+├── game_dsl.dart                    <span class="tree-comment">← Gas stove + tava (engine)</span>
+├── dsl_spec.dart                    <span class="tree-comment">← Recipe-card template</span>
+└── widgets/
+    └── dsl_status_chips.dart        <span class="tree-comment">← Timer, plates, scale (UI)</span></div>
+
+<div class="analogy">
+  <table style="margin: 0;">
+    <tr><th>File</th><th>Food equivalent</th><th>Sab brands use karte?</th></tr>
+    <tr><td><code>game_dsl.dart</code></td><td>🔥 Gas stove + kadahi + tava</td><td><span class="mark mark-yes">✅</span> Universal</td></tr>
+    <tr><td><code>dsl_spec.dart</code></td><td>📋 Menu format / recipe-card template</td><td><span class="mark mark-yes">✅</span> Universal</td></tr>
+    <tr><td><code>dsl_status_chips.dart</code></td><td>⏱️ Timer, 🍽️ plates, ⚖️ scale</td><td><span class="mark mark-yes">✅</span> Universal</td></tr>
+  </table>
+</div>
+
+<h3>Yeh code Wordle ke time mein bana — ab har game free mein use karega</h3>
+<p>Pizza Hut wala bhi timer use karega, biryani wala bhi, sushi wala bhi. <strong>Ek baar banao, 5 baar fayda.</strong></p>
+
+<pre><code><span class="tree-comment">// lib/dsl/game_dsl.dart — universal cooking logic</span>
+class DSLEngine {
+  final GameDSL dsl;
+  const DSLEngine(this.dsl);
+
+  List&lt;DSLAction&gt; evaluate(String event, DSLEvalContext ctx) {
+    <span class="tree-comment">// Universal evaluation — engine ko nahi pata yeh pizza hai ya biryani</span>
+    final matched = &lt;DSLAction&gt;[];
+    for (final trigger in dsl.activeTriggers) {
+      if (trigger.event != event) continue;
+      if (trigger.conditions.every((c) =&gt; c.passes(ctx))) {
+        matched.addAll(trigger.actions);
+      }
+    }
+    return matched;
+  }
+}</code></pre>
+
+
+<!-- ============================================================ -->
+<h2 id="floor-2">4. Floor 2 — Per-Brand Menus (Per-Game Specs)</h2>
+
+<p>Har game ka apna alag <strong>menu file</strong>. Yeh "brand identity" hai.</p>
+
+<div class="file-tree">lib/models/                                <span class="tree-comment">← First floor (per-brand)</span>
+├── wordle_dsl.dart                       <span class="tree-brand">🍕 Pizza Hut ka menu</span>
+├── ship_fight_dsl.dart                   <span class="tree-brand">🍛 Biryani House ka menu (future)</span>
+├── red_flag_dsl.dart                     <span class="tree-brand">🍣 Sushi Express ka menu (future)</span>
+├── emoji_guess_dsl.dart                  <span class="tree-brand">🍢 Tandoori Tales ka menu (future)</span>
+└── tictactoe_dsl.dart                    <span class="tree-brand">🍔 Burger King ka menu (future)</span></div>
+
+<h3>Har menu file mein kya hota hai?</h3>
+<table>
+  <tr><th>Brand</th><th>Apne Events (kab fire ho)</th><th>Apne Actions (kya kare)</th></tr>
+  <tr>
+    <td>🍕 <strong>Pizza Hut</strong> (Wordle)</td>
+    <td><code>wrongGuess</code>, <code>correctGuess</code>, <code>timerExpiry</code></td>
+    <td><code>addGuesses</code>, <code>setGuessTimer</code>, <code>revealHint</code></td>
+  </tr>
+  <tr>
+    <td>🍛 <strong>Biryani House</strong> (Ship Fight)</td>
+    <td><code>turnStart</code>, <code>shipDestroyed</code>, <code>playerHit</code></td>
+    <td><code>damageShip</code>, <code>healShip</code>, <code>spawnPickup</code></td>
+  </tr>
+  <tr>
+    <td>🍣 <strong>Sushi Express</strong> (Red Flag)</td>
+    <td><code>questionShown</code>, <code>cardFlipped</code></td>
+    <td><code>flipCard</code>, <code>showHint</code>, <code>endRound</code></td>
+  </tr>
+  <tr>
+    <td>🍔 <strong>Burger King</strong> (Tic Tac Toe)</td>
+    <td><code>marked</code>, <code>roundEnd</code>, <code>tieDetected</code></td>
+    <td><code>swapTurn</code>, <code>disableCell</code>, <code>resetBoard</code></td>
+  </tr>
+</table>
+
+<div class="analogy">
+  <strong>Pizza Hut ke menu mein "biryani masala" item nahi hai. Biryani House ke menu mein "extra mozzarella" nahi hai.</strong><br>
+  Logical separation — har brand apni dunia mein safe.
+</div>
+
+<h3>Wordle menu ka example (already bana hua hai)</h3>
+<pre><code><span class="tree-comment">// lib/models/wordle_dsl.dart</span>
+class WordleEvents {
+  static const wrongGuess   = <span style="color:#86efac">'wrongGuess'</span>;
+  static const correctGuess = <span style="color:#86efac">'correctGuess'</span>;
+  static const gameStart    = <span style="color:#86efac">'gameStart'</span>;
+  static const timerExpiry  = <span style="color:#86efac">'timerExpiry'</span>;
+}
+
+class WordleActions {
+  static const addGuesses    = <span style="color:#86efac">'addGuesses'</span>;
+  static const setGuessTimer = <span style="color:#86efac">'setGuessTimer'</span>;
+  static const revealHint    = <span style="color:#86efac">'revealHint'</span>;
+}
+
+const wordleDslSpec = DSLGameSpec(
+  gameId: <span style="color:#86efac">'wordle'</span>,
+  events: { WordleEvents.wrongGuess, WordleEvents.correctGuess, ... },
+  actionTypes: { WordleActions.addGuesses, ... },
+  ...
+);</code></pre>
+
+
+<!-- ============================================================ -->
+<h2 id="floor-3">5. Floor 3 — Server-side FSSAI Inspector</h2>
+
+<p>Bilkul wahi structure server pe bhi — ek shared core + per-game files.</p>
+
+<div class="file-tree">functions/src/
+├── dsl/                                  <span class="tree-comment">← Shared inspector (future refactor)</span>
+│   └── engine.ts                         <span class="tree-comment">← Universal validation logic</span>
+│
+└── controllers/
+    ├── wordle_dsl_engine.ts              <span class="tree-brand">🍕 Pizza Hut FSSAI rules</span>
+    ├── ship_fight_dsl_engine.ts          <span class="tree-brand">🍛 Biryani House FSSAI rules (future)</span>
+    └── ...</div>
+
+<div class="analogy">
+  <strong>FSSAI Inspector</strong> har order dekh ke check karta hai:
+  <ul>
+    <li>Brand ke menu mein yeh item hai? (event/action valid?)</li>
+    <li>Quantity sahi hai? (param within range?)</li>
+    <li>Recipe complete hai? (trigger has actions?)</li>
+  </ul>
+  Inspection process universal hai — bas <strong>menu reference</strong> har brand ka apna.
+</div>
+
+<p>Even agar Gemini AI kuch garbage generate kare, inspector filter kar deta hai. <strong>Customer ko hamesha valid food milta hai.</strong></p>
+
+
+<!-- ============================================================ -->
+<h2 id="flow">6. Kaise Sab Milkar Kaam Karte Hain</h2>
+
+<p>Imagine: <em>Customer ne order kiya — "Pizza Margherita with extra cheese after 5 min wait":</em></p>
+
+<div class="flow">
+  <div class="flow-step">
+    <div class="step-num">1</div>
+    <div><strong>Customer (User)</strong> — App pe prompt likha: "extra cheese after 5 min wait"</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">2</div>
+    <div><strong>Order App (AI Chat)</strong> — Cuisine identify kiya → Pizza Hut menu uthaya</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">3</div>
+    <div><strong>Recipe Card banta hai (DSL JSON)</strong> — Pizza Hut menu se valid items hi (<code>addCheese</code> is valid)</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">4</div>
+    <div><strong>Inspector check karta hai (validateWordleDSL)</strong> — Pizza Hut menu se cross-check</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">5</div>
+    <div><strong>Shared Kitchen mein cooking (DSL Engine evaluate)</strong> — Stove (engine) recipe follow karta hai</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">6</div>
+    <div><strong>Universal Timer use karke wait (DslCountdownChip)</strong> — Same timer jo biryani wala bhi use karta</div>
+  </div>
+  <div class="flow-step">
+    <div class="step-num">7</div>
+    <div><strong>Pizza ready → serve (Action apply)</strong> — Player ko cheese-loaded pizza milta hai</div>
+  </div>
+</div>
+
+<div class="callout">
+  Step <strong>1, 2, 4</strong> mein <strong>Pizza Hut ka specific menu</strong> use hota hai.<br>
+  Step <strong>3, 5, 6, 7</strong> mein <strong>shared kitchen tools</strong> use hote hain.<br>
+  Ek single change menu mein karne se sirf pizza affect hota hai — biryani ya sushi nahi.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="reuse">7. Reuse Rules — Kaun Kya Use Kar Sakta Hai?</h2>
+
+<h3>7a. Shared core (<code>lib/dsl/</code>) — sab use karte hain</h3>
+
+<table>
+  <tr><th>Component</th><th>Food equivalent</th><th>🍕 Pizza</th><th>🍛 Biryani</th><th>🍣 Sushi</th><th>🍔 Burger</th></tr>
+  <tr>
+    <td><code>GameDSL</code></td>
+    <td>Recipe-card format</td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+  </tr>
+  <tr>
+    <td><code>DSLEngine</code></td>
+    <td>Gas stove (cooking logic)</td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+  </tr>
+  <tr>
+    <td><code>DslCountdownChip</code></td>
+    <td>Universal timer</td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+  </tr>
+  <tr>
+    <td><code>showDslToast()</code></td>
+    <td>Notification bell</td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+    <td><span class="mark mark-yes">✅</span></td>
+  </tr>
+</table>
+
+<h3>7b. Per-brand menu items — apna apna</h3>
+
+<table>
+  <tr><th>Action</th><th>🍕 Pizza Hut</th><th>🍛 Biryani House</th></tr>
+  <tr><td><code>setGuessTimer</code> (pizza ka timer)</td><td><span class="mark mark-yes">✅ Apna hai</span></td><td><span class="mark mark-no">❌ Nahi chahiye</span></td></tr>
+  <tr><td><code>addCheese</code></td><td><span class="mark mark-yes">✅</span></td><td><span class="mark mark-no">❌</span></td></tr>
+  <tr><td><code>addBiryaniMasala</code></td><td><span class="mark mark-no">❌</span></td><td><span class="mark mark-yes">✅</span></td></tr>
+  <tr><td><code>damageShip</code></td><td><span class="mark mark-no">❌</span></td><td><span class="mark mark-yes">✅</span></td></tr>
+</table>
+
+<h3>7c. Cross-brand inspiration — possible hai</h3>
+
+<div class="analogy">
+  Agar <strong>Biryani House</strong> ko Pizza Hut wala "timer concept" pasand aaye, wo apne menu mein bhi same idea use kar sakti hai — bas naam alag rakhke (jaise <code>setMoveTimer</code>). Engine and timer UI dono shared hain.
+</div>
+
+<pre><code><span class="tree-comment">// Wordle ne yeh banaya (Pizza Hut menu)</span>
+class WordleActions {
+  static const setGuessTimer = <span style="color:#86efac">'setGuessTimer'</span>;
+}
+
+<span class="tree-comment">// Ship Fight bhi same concept use kar sakta hai (Biryani menu)</span>
+class ShipFightActions {
+  static const setMoveTimer = <span style="color:#86efac">'setMoveTimer'</span>;  <span class="tree-comment">// Same idea, different name</span>
+}
+
+<span class="tree-comment">// Dono underlying DslCountdownChip widget reuse karte hain ✅</span></code></pre>
+
+
+<!-- ============================================================ -->
+<h2 id="final-tree">8. Final Folder Structure — Saare Games Migrate Ke Baad</h2>
+
+<div class="file-tree">lib/
+├── dsl/                              <span class="tree-shared">════ SHARED KITCHEN (ek baar banayi) ════</span>
+│   ├── game_dsl.dart                 <span class="tree-comment">(engine, types — universal)</span>
+│   ├── dsl_spec.dart                 <span class="tree-comment">(spec template — universal)</span>
+│   └── widgets/
+│       └── dsl_status_chips.dart     <span class="tree-comment">(timer chip, toast — universal)</span>
+│
+├── models/                            <span class="tree-brand">════ PER-BRAND MENUS (har game ka apna) ════</span>
+│   ├── wordle_dsl.dart                <span class="tree-comment">🍕 Pizza Hut menu</span>
+│   ├── ship_fight_dsl.dart            <span class="tree-comment">🍛 Biryani House menu</span>
+│   ├── red_flag_dsl.dart              <span class="tree-comment">🍣 Sushi Express menu</span>
+│   ├── emoji_guess_dsl.dart           <span class="tree-comment">🍢 Tandoori Tales menu</span>
+│   └── tictactoe_dsl.dart             <span class="tree-comment">🍔 Burger King menu</span>
+│
+├── controllers/                       <span class="tree-brand">════ PER-BRAND CHEFS ════</span>
+│   ├── wordle_controller.dart         <span class="tree-comment">(Pizza chef)</span>
+│   ├── ship_fight_controller.dart     <span class="tree-comment">(Biryani chef)</span>
+│   └── ...
+│
+└── screens/                           <span class="tree-brand">════ PER-BRAND DINING AREAS ════</span>
+    ├── wordle_screen.dart             <span class="tree-comment">(Pizza Hut dining)</span>
+    ├── ship_fight_screen.dart         <span class="tree-comment">(Biryani dining)</span>
+    └── ...
+
+functions/src/
+├── dsl/                              <span class="tree-shared">════ SHARED INSPECTOR (server) ════</span>
+│   └── engine.ts                     <span class="tree-comment">(universal validator)</span>
+│
+└── controllers/
+    ├── wordle_dsl_engine.ts          <span class="tree-comment">🍕 Pizza Hut FSSAI rules</span>
+    ├── ship_fight_dsl_engine.ts      <span class="tree-comment">🍛 Biryani House FSSAI rules</span>
+    └── ...</div>
+
+<div class="callout">
+  <strong>Pattern saaf hai:</strong> Har file ka role single-purpose hai. Shared cheezein <code>lib/dsl/</code> mein, brand-specific cheezein <code>lib/models/&lt;game&gt;_dsl.dart</code> mein.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="practical">9. Practical Implications</h2>
+
+<h3>9a. Naye game add karna kitna easy?</h3>
+<div class="analogy">
+  <strong>Pizza Hut setup ho chuki hai (Wordle done). Biryani House open karna chahte ho?</strong>
+  <ul>
+    <li>Sirf <code>ship_fight_dsl.dart</code> (menu) likho</li>
+    <li>Sirf <code>ship_fight_dsl_engine.ts</code> (server FSSAI) likho</li>
+    <li>Existing controller + screen mein 5-6 lines integration</li>
+  </ul>
+  <strong>Shared kitchen (engine, widgets) ko bilkul touch nahi karna padta.</strong> Stove already lag chuka hai. Bas naya menu likho.
+</div>
+
+<h3>9b. Ek game ka bug fix doosre ko affect karega kya?</h3>
+<p><strong>Nahi.</strong> Pizza Hut ke menu mein typo fix karne se biryani ka menu nahi badlta.</p>
+<p><strong>Lekin</strong> — agar shared kitchen mein (engine) bug fix karoge, to <strong>saare brands benefit honge</strong>. Ek hi jagah fix, 5 jagah effect. <strong>Yahi DSL ka asli fayda hai.</strong></p>
+
+<h3>9c. UI components share ho sakte hain?</h3>
+<p><strong>Haan</strong>, jo bhi <code>lib/dsl/widgets/</code> mein hai (timer chip, toast helper, badge) — koi bhi game directly use kar sakta hai. <strong>Universal cutlery.</strong></p>
+
+<h3>9d. Conflict ho sakta hai kya 2 games mein?</h3>
+<p><strong>Nahi</strong>, kyunki har game apne string constants use karta hai:</p>
+<ul>
+  <li>Wordle: <code>WordleEvents.wrongGuess</code></li>
+  <li>Ship Fight: <code>ShipFightEvents.shipMove</code></li>
+</ul>
+<p>Engine ko <strong>kis game ka event hai</strong> se matlab nahi — wo bas event ka <strong>string name</strong> check karta hai aur matching trigger find karta hai.</p>
+
+<h3>9e. Effort comparison — Pehla game vs baad ke games</h3>
+<table>
+  <tr><th>Migration</th><th>Files touched</th><th>Time required</th><th>Reason</th></tr>
+  <tr><td>🍕 <strong>Wordle</strong> (1st game)</td><td>22 files</td><td>2-3 din</td><td>Pehle shared kitchen banai gayi</td></tr>
+  <tr><td>🍛 <strong>Ship Fight</strong> (2nd game)</td><td>~6 files</td><td>2-3 ghante</td><td>Shared kitchen already ready</td></tr>
+  <tr><td>🍣 <strong>Red Flag</strong> (3rd game)</td><td>~6 files</td><td>2-3 ghante</td><td>Pattern proven</td></tr>
+  <tr><td>🍢 <strong>Emoji Guess</strong> (4th)</td><td>~6 files</td><td>2-3 ghante</td><td>Smooth migration</td></tr>
+  <tr><td>🍔 <strong>Tic Tac Toe</strong> (5th)</td><td>~6 files</td><td>2-3 ghante</td><td>Standard recipe</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="summary">10. Ek Line Mein Summary</h2>
+
+<div class="callout" style="font-size: 16px; padding: 18px 22px;">
+  <strong>DSL approach = ek shared cloud kitchen jisme 5 alag brands apna apna menu chalaate hain.</strong><br><br>
+  Common infrastructure (stove, timer, plates) sab share karte hain — har brand ka apna unique flavor (events, actions) hai.<br><br>
+  Naya brand add karna easy hai, ek brand ka change baki brands ko impact nahi karta, aur shared tools mein improvement <strong>sab brands ko milti hai</strong>.
+</div>
+
+<div class="analogy" style="margin-top: 24px;">
+  <strong>3 main takeaways:</strong>
+  <ol>
+    <li>🏗️ <strong>Build once, share forever</strong> — Shared kitchen ek baar bana, hamesha kaam aata hai</li>
+    <li>🎯 <strong>Brand isolation</strong> — Pizza Hut ka problem Biryani House ko nahi pahunchta</li>
+    <li>🚀 <strong>Migration cost drops dramatically</strong> — Pehla game 22 files, baaki games 6 files</li>
+  </ol>
+</div>
+
+</main>
+</div>
+</body>
+</html>
