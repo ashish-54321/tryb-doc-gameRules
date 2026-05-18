@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Wordle DSL — Complete Guide (Hinglish)</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-2: #1e293b;
+    --bg-3: #111827;
+    --fg: #e2e8f0;
+    --mute: #94a3b8;
+    --accent: #06b6d4;
+    --accent-2: #a259ff;
+    --good: #22c55e;
+    --warn: #f59e0b;
+    --bad:  #ef4444;
+    --line: #334155;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .wrap {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg-3);
+    border-right: 1px solid var(--line);
+    padding: 22px 18px;
+  }
+  nav.toc h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--mute);
+    margin: 0 0 12px;
+  }
+  nav.toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: toc;
+  }
+  nav.toc li {
+    counter-increment: toc;
+    margin-bottom: 4px;
+  }
+  nav.toc a {
+    color: var(--fg);
+    text-decoration: none;
+    display: block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13.5px;
+  }
+  nav.toc a::before {
+    content: counter(toc) ". ";
+    color: var(--accent);
+    font-weight: 700;
+  }
+  nav.toc a:hover {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--accent);
+  }
+  main {
+    padding: 36px 42px 80px;
+    max-width: 980px;
+  }
+  h1 {
+    font-size: 30px;
+    margin: 0 0 4px;
+    background: linear-gradient(90deg, #06b6d4, #a259ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .sub { color: var(--mute); margin-bottom: 30px; font-size: 14px; }
+  h2 {
+    font-size: 22px;
+    margin: 38px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  h3 { font-size: 17px; color: var(--accent); margin: 24px 0 8px; }
+  h4 { font-size: 14.5px; color: var(--accent-2); margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 1px; }
+  p { margin: 8px 0; }
+  code, pre {
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+  }
+  code {
+    background: rgba(6, 182, 212, 0.12);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  pre {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  pre code { background: none; color: var(--fg); padding: 0; }
+  .json-key { color: #7dd3fc; }
+  .json-str { color: #86efac; }
+  .json-num { color: #fbbf24; }
+  .json-bool { color: #f472b6; }
+  .json-cmt { color: var(--mute); font-style: italic; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  th { background: var(--bg-2); color: var(--accent); font-weight: 700; }
+  tr:hover td { background: rgba(6, 182, 212, 0.04); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-right: 5px;
+  }
+  .tag-new   { background: rgba(34, 197, 94, 0.18); color: var(--good); }
+  .tag-mod   { background: rgba(245, 158, 11, 0.18); color: var(--warn); }
+  .tag-good  { background: rgba(34, 197, 94, 0.18); color: var(--good); }
+  .tag-bad   { background: rgba(239, 68, 68, 0.18); color: var(--bad); }
+  .tag-warn  { background: rgba(245, 158, 11, 0.18); color: var(--warn); }
+  .tag-info  { background: rgba(6, 182, 212, 0.18); color: var(--accent); }
+  .callout {
+    border-left: 4px solid var(--accent);
+    background: rgba(6, 182, 212, 0.08);
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 14px 0;
+  }
+  .callout.warn { border-color: var(--warn); background: rgba(245, 158, 11, 0.08); }
+  .callout.bad  { border-color: var(--bad);  background: rgba(239, 68, 68, 0.08); }
+  .analogy {
+    border: 1px dashed var(--accent-2);
+    background: rgba(162, 89, 255, 0.06);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .analogy::before {
+    content: "🎯 Real-life analogy";
+    display: block;
+    color: var(--accent-2);
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 14px;
+    margin: 14px 0;
+    padding: 12px;
+    background: var(--bg-2);
+    border-radius: 8px;
+    border-left: 4px solid var(--accent);
+  }
+  .stage .num {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--accent);
+    text-align: center;
+  }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 12px 0;
+  }
+  .grid2 > div { background: var(--bg-2); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line); }
+  .ascii {
+    font-family: monospace;
+    white-space: pre;
+    background: var(--bg-3);
+    padding: 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--mute);
+    overflow-x: auto;
+  }
+  hr { border: none; border-top: 1px dashed var(--line); margin: 30px 0; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; margin: 0 2px; }
+  .pill-event  { background: rgba(124, 58, 237, 0.25); color: #c4b5fd; }
+  .pill-field  { background: rgba(34, 197, 94, 0.25); color: #86efac; }
+  .pill-action { background: rgba(6, 182, 212, 0.25); color: #7dd3fc; }
+  .pill-op     { background: rgba(245, 158, 11, 0.25); color: #fcd34d; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ────────────────  TOC  ──────────────── -->
+<nav class="toc">
+  <h2>Sections</h2>
+  <ol>
+    <li><a href="#intro">DSL Kya Hai?</a></li>
+    <li><a href="#vs-primitives">DSL vs Primitives</a></li>
+    <li><a href="#components">DSL ke 4 Components</a></li>
+    <li><a href="#json-shape">JSON Input/Output Shape</a></li>
+    <li><a href="#full-flow">Pura Flow Stage-by-Stage</a></li>
+    <li><a href="#example">Real Example Walkthrough</a></li>
+    <li><a href="#files">Files Created &amp; Modified</a></li>
+    <li><a href="#db">Database Structure</a></li>
+    <li><a href="#client">Client-Side Rendering</a></li>
+    <li><a href="#future-migration">Future Game Migration</a></li>
+    <li><a href="#extend">Naye Parameters Add Karna</a></li>
+    <li><a href="#impossible">Impossible Game Kya Hota Hai?</a></li>
+    <li><a href="#limits">Current Parameter Limits</a></li>
+    <li><a href="#summary">Final Summary</a></li>
+  </ol>
+</nav>
+
+<!-- ────────────────  MAIN  ──────────────── -->
+<main>
+
+<h1>Wordle DSL — Complete Architecture Guide</h1>
+<div class="sub">Hinglish • JSON examples • Code walkthrough • Migration plan • Real Wordle analogies</div>
+
+<!-- ============================================================ -->
+<h2 id="intro">1. DSL Kya Hai?</h2>
+
+<p><strong>DSL = Domain-Specific Language.</strong> Ek chhota JSON-based "mini language" hai jo Wordle ke game rules describe karta hai bina TypeScript code likhe.</p>
+
+<p>Asli baat: <strong>AI ek user prompt padh ke JSON rules generate karti hai, server validate karta hai, RTDB save karta hai, client interpret karke runtime pe execute karta hai.</strong></p>
+
+<div class="analogy">
+  Soch lo recipe cards:
+  <ul>
+    <li><strong>Pizza recipe</strong> = ek DSL rule list ("agar oven pe 200°C ho aur 12 min beet jaaye, to pizza nikal lo")</li>
+    <li><strong>Recipe card</strong> = JSON file (paper pe steps)</li>
+    <li><strong>Chef</strong> = DSL Engine (recipe padh ke kitchen mein execute karta hai)</li>
+    <li>Naya pizza chahiye? Bas <strong>nayi recipe card</strong> likho — kitchen wapas se nahi banana padta</li>
+  </ul>
+</div>
+
+<p>Aaj ki taarikh tak Wordle mein 4 chizein DSL-driven hain: <strong>events</strong> (kab kuch trigger ho), <strong>conditions</strong> (kya check karna hai), <strong>operators</strong> (kaise compare karna hai), aur <strong>actions</strong> (kya karna hai).</p>
+
+
+<!-- ============================================================ -->
+<h2 id="vs-primitives">2. DSL vs Composable Primitives — Kya Farak Hai?</h2>
+
+<p>App mein do alag approaches use hote hain. Ship Fight <strong>Composable Primitives</strong> use karta hai. Wordle <strong>True DSL</strong> use karta hai.</p>
+
+<table>
+  <thead><tr><th></th><th>🔹 Composable Primitives</th><th>🔸 True DSL</th></tr></thead>
+  <tbody>
+  <tr><td><strong>Storage</strong></td>
+      <td>"logic" blob — primitive name reference</td>
+      <td>"dsl" blob — pura rule JSON</td></tr>
+  <tr><td><strong>AI ka kaam</strong></td>
+      <td>Pre-coded functions ke whitelist mein se choose karna</td>
+      <td>Free-form JSON rule generate karna</td></tr>
+  <tr><td><strong>Naya behavior kaise aaye?</strong></td>
+      <td>❌ Developer ko TypeScript code likhna padega + deploy</td>
+      <td>✅ Bas naya prompt — koi code change nahi</td></tr>
+  <tr><td><strong>AI flexibility</strong></td>
+      <td>Limited — sirf pre-defined options</td>
+      <td>High — params (timer seconds, hint count, etc.) freely choose</td></tr>
+  <tr><td><strong>Type safety</strong></td>
+      <td>Strong (TS compile-time)</td>
+      <td>Runtime validation (Gemini schema + server validator)</td></tr>
+  <tr><td><strong>Complex per-game logic</strong></td>
+      <td>Better (custom code per primitive)</td>
+      <td>Limited to engine's action vocabulary</td></tr>
+  <tr><td><strong>Use case fit</strong></td>
+      <td>Complex turn-based games (Ship Fight)</td>
+      <td>Rule-driven games (Wordle, Hangman)</td></tr>
+  </tbody>
+</table>
+
+<div class="analogy">
+  <strong>Primitives = Restaurant menu</strong>: AI sirf existing dishes order kar sakta hai. Naya dish chahiye? Chef ko naya recipe seekhana padega (code change).<br><br>
+  <strong>DSL = Home cooking with shared pantry</strong>: AI bata sakta hai "le 2 onion + 1 tsp salt + 5 min boil". Pantry items (events/actions/fields) fixed hain, lekin combination infinite.
+</div>
+
+<h3>Kya Primitives mein POSSIBLE NAHI tha jo DSL mein hai?</h3>
+<ul>
+  <li><strong>Conditional triggers:</strong> "agar wrongGuessCount >= 3 to..." — Primitives mein har condition ke liye alag function chahiye</li>
+  <li><strong>AI param tuning:</strong> AI freely 30s, 45s, 60s choose kar sakti hai. Primitives mein <code>setTimer30s()</code> aur <code>setTimer60s()</code> alag functions chahiye</li>
+  <li><strong>Action chaining:</strong> Ek event pe 3 actions (timer + hint + extra guess) — Primitives mein combination ke liye nayi primitive likhni padti</li>
+  <li><strong>Runtime distribution:</strong> Variant JSON RTDB se aata hai. <strong>Bina app update</strong> doosre users ke phone pe naya rule kaam karta hai</li>
+  <li><strong>AI invention:</strong> Wo combinations jo developer ne soch bhi nahi liye — AI khud explore kar sakti hai</li>
+</ul>
+
+
+<!-- ============================================================ -->
+<h2 id="components">3. DSL ke 4 Building Blocks</h2>
+
+<p>Pura DSL sirf 4 cheezon ka game hai. In char ko mila ke infinite variations bante hain.</p>
+
+<h3>3a. Events <span class="pill pill-event">5 total</span> — Kab fire ho?</h3>
+<table>
+  <tr><th>Event</th><th>Kab fire hota hai</th><th>Example rule</th></tr>
+  <tr><td><code>gameStart</code></td><td>Game shuru hote hi</td><td>Timer set karo / extra guesses do</td></tr>
+  <tr><td><code>wrongGuess</code></td><td>Galat guess submit karne ke baad</td><td>2 wrong ke baad hint reveal</td></tr>
+  <tr><td><code>correctGuess</code></td><td>Sahi answer guess hone pe</td><td>Bonus action / celebration</td></tr>
+  <tr><td><code>guessSubmit</code></td><td>Har guess submit ke baad (sahi/galat dono)</td><td>Per-guess timer reset</td></tr>
+  <tr><td><code>timerExpiry</code></td><td>Per-guess timer 0 hone pe</td><td>Skip guess / lose 1 attempt</td></tr>
+</table>
+
+<h3>3b. Condition Fields <span class="pill pill-field">4 total</span> — Kya check karein?</h3>
+<table>
+  <tr><th>Field</th><th>Kya tracks karta hai</th></tr>
+  <tr><td><code>wrongGuessCount</code></td><td>Ab tak kitne wrong guesses hue</td></tr>
+  <tr><td><code>guessNumber</code></td><td>Ye kaunsi guess hai (1, 2, 3...)</td></tr>
+  <tr><td><code>hintsGiven</code></td><td>Kitne hints reveal ho chuke</td></tr>
+  <tr><td><code>remainingGuesses</code></td><td>Kitne guesses bache hain</td></tr>
+</table>
+
+<h3>3c. Operators <span class="pill pill-op">6 total</span> — Kaise compare karein?</h3>
+<table>
+  <tr><th>Operator</th><th>Meaning</th><th>Example</th></tr>
+  <tr><td><code>eq</code></td><td>Equal (==)</td><td>wrongGuessCount == 2</td></tr>
+  <tr><td><code>neq</code></td><td>Not equal (!=)</td><td>guessNumber != 1</td></tr>
+  <tr><td><code>gt</code></td><td>Greater than (&gt;)</td><td>wrongGuessCount &gt; 3</td></tr>
+  <tr><td><code>gte</code></td><td>Greater or equal (&gt;=)</td><td>wrongGuessCount &gt;= 2</td></tr>
+  <tr><td><code>lt</code></td><td>Less than (&lt;)</td><td>remainingGuesses &lt; 2</td></tr>
+  <tr><td><code>lte</code></td><td>Less or equal (&lt;=)</td><td>remainingGuesses &lt;= 1</td></tr>
+</table>
+
+<h3>3d. Actions <span class="pill pill-action">5 total</span> — Kya kare?</h3>
+<table>
+  <tr><th>Action</th><th>Kya karta hai</th><th>Params</th><th>Server enforced?</th></tr>
+  <tr><td><code>addGuesses</code></td><td>Extra guesses milte hain</td><td>count: 1-3</td><td>✅ Haan</td></tr>
+  <tr><td><code>setGuessTimer</code></td><td>Per-guess countdown set</td><td>seconds: 10-120</td><td>⚠️ Client</td></tr>
+  <tr><td><code>revealHint</code></td><td>Hint toast dikhata hai</td><td>(none)</td><td>⚠️ Client only</td></tr>
+  <tr><td><code>skipGuess</code></td><td>Current input clear</td><td>(none)</td><td>⚠️ Client only</td></tr>
+  <tr><td><code>endGame</code></td><td>Game force end</td><td>outcome: "win"/"lose"</td><td>⚠️ Client only</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="json-shape">4. JSON Input/Output Shape</h2>
+
+<p>Pura DSL ek single JSON object hai. Yeh hai pura template:</p>
+
+<pre><code>{
+  <span class="json-key">"triggers"</span>: [
+    {
+      <span class="json-key">"on"</span>:         <span class="json-str">"&lt;event-name&gt;"</span>,
+      <span class="json-key">"conditions"</span>: [
+        {
+          <span class="json-key">"field"</span>: <span class="json-str">"&lt;field-name&gt;"</span>,
+          <span class="json-key">"op"</span>:    <span class="json-str">"&lt;operator&gt;"</span>,
+          <span class="json-key">"value"</span>: <span class="json-num">&lt;number&gt;</span>
+        }
+      ],
+      <span class="json-key">"actions"</span>: [
+        {
+          <span class="json-key">"type"</span>:   <span class="json-str">"&lt;action-type&gt;"</span>,
+          <span class="json-key">"params"</span>: { <span class="json-str">"..."</span>: <span class="json-str">"..."</span> }
+        }
+      ]
+    }
+  ]
+}</code></pre>
+
+<h3>Simple Real Example</h3>
+<p>User ne bola: <em>"After 2 wrong guesses, give me 1 extra guess and reveal a hint."</em></p>
+
+<pre><code>{
+  <span class="json-key">"triggers"</span>: [
+    {
+      <span class="json-key">"on"</span>: <span class="json-str">"wrongGuess"</span>,
+      <span class="json-key">"conditions"</span>: [
+        { <span class="json-key">"field"</span>: <span class="json-str">"wrongGuessCount"</span>, <span class="json-key">"op"</span>: <span class="json-str">"gte"</span>, <span class="json-key">"value"</span>: <span class="json-num">2</span> }
+      ],
+      <span class="json-key">"actions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-str">"addGuesses"</span>,  <span class="json-key">"params"</span>: { <span class="json-key">"count"</span>: <span class="json-num">1</span> } },
+        { <span class="json-key">"type"</span>: <span class="json-str">"revealHint"</span> }
+      ]
+    }
+  ]
+}</code></pre>
+
+<h3>Complex Real Example</h3>
+<p>User ne bola: <em>"Brutal mode — 15s timer per guess. After 1 wrong, give a hint. After 3 wrongs, end game in defeat."</em></p>
+
+<pre><code>{
+  <span class="json-key">"triggers"</span>: [
+    {
+      <span class="json-key">"on"</span>: <span class="json-str">"gameStart"</span>,
+      <span class="json-key">"conditions"</span>: [],
+      <span class="json-key">"actions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-str">"setGuessTimer"</span>, <span class="json-key">"params"</span>: { <span class="json-key">"seconds"</span>: <span class="json-num">15</span> } }
+      ]
+    },
+    {
+      <span class="json-key">"on"</span>: <span class="json-str">"wrongGuess"</span>,
+      <span class="json-key">"conditions"</span>: [
+        { <span class="json-key">"field"</span>: <span class="json-str">"wrongGuessCount"</span>, <span class="json-key">"op"</span>: <span class="json-str">"eq"</span>, <span class="json-key">"value"</span>: <span class="json-num">1</span> }
+      ],
+      <span class="json-key">"actions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-str">"revealHint"</span> }
+      ]
+    },
+    {
+      <span class="json-key">"on"</span>: <span class="json-str">"wrongGuess"</span>,
+      <span class="json-key">"conditions"</span>: [
+        { <span class="json-key">"field"</span>: <span class="json-str">"wrongGuessCount"</span>, <span class="json-key">"op"</span>: <span class="json-str">"gte"</span>, <span class="json-key">"value"</span>: <span class="json-num">3</span> }
+      ],
+      <span class="json-key">"actions"</span>: [
+        { <span class="json-key">"type"</span>: <span class="json-str">"endGame"</span>, <span class="json-key">"params"</span>: { <span class="json-key">"outcome"</span>: <span class="json-str">"lose"</span> } }
+      ]
+    }
+  ]
+}</code></pre>
+
+
+<!-- ============================================================ -->
+<h2 id="full-flow">5. Pura Flow — Stage by Stage</h2>
+
+<p>User ke prompt se lekar gameplay tak — saare stages ka data flow.</p>
+
+<div class="stage">
+  <div class="num">1</div>
+  <div>
+    <h4>User Prompt</h4>
+    <p>User AI Wordle Chat screen pe English mein likhta hai:</p>
+    <pre><code><span class="json-str">"After 2 wrong guesses, give me 30-second timer and 1 extra guess"</span></code></pre>
+    <p><strong>File:</strong> <code>lib/screens/ai_wordle_chat_screen.dart</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">2</div>
+  <div>
+    <h4>Client → Cloud Function call</h4>
+    <p>Service layer Firebase Cloud Function <code>chatGameCosmetic</code> ko call karta hai with payload:</p>
+    <pre><code>{
+  <span class="json-key">"baseGameId"</span>: <span class="json-str">"wordle"</span>,
+  <span class="json-key">"message"</span>: <span class="json-str">"After 2 wrong guesses, give me 30-second timer and 1 extra guess"</span>,
+  <span class="json-key">"history"</span>: [/* prior turns */]
+}</code></pre>
+    <p><strong>File:</strong> <code>lib/services/wordle_cosmetic_service.dart</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">3</div>
+  <div>
+    <h4>Server prepares Gemini schema</h4>
+    <p>Server <code>cosmetic_schemas.ts</code> se Wordle ka spec uthaata hai jisme 3 schemas hain: <code>cosmetic</code>, <code>rules</code>, <code>dsl</code>. <code>buildChatSchema()</code> teeno ko ek combined Gemini <code>responseSchema</code> mein wrap karta hai:</p>
+    <pre><code>{
+  <span class="json-key">"type"</span>: <span class="json-str">"OBJECT"</span>,
+  <span class="json-key">"properties"</span>: {
+    <span class="json-key">"reply"</span>:        { <span class="json-key">"type"</span>: <span class="json-str">"STRING"</span> },
+    <span class="json-key">"isReadyToApply"</span>: { <span class="json-key">"type"</span>: <span class="json-str">"BOOLEAN"</span> },
+    <span class="json-key">"draft"</span>:        WORDLE_SCHEMA,
+    <span class="json-key">"rules"</span>:        WORDLE_RULES_SCHEMA,
+    <span class="json-key">"dsl"</span>:          WORDLE_DSL_SCHEMA   <span class="json-cmt">// ← DSL ka schema</span>
+  }
+}</code></pre>
+    <p><strong>File:</strong> <code>functions/src/controllers/cosmetics_chat.ts</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">4</div>
+  <div>
+    <h4>Gemini AI generates structured JSON</h4>
+    <p>Gemini schema follow karke output deta hai (structured generation — invalid JSON impossible):</p>
+    <pre><code>{
+  <span class="json-key">"reply"</span>: <span class="json-str">"Set up a 30-second timer and 1 extra guess after 2 wrongs!"</span>,
+  <span class="json-key">"isReadyToApply"</span>: <span class="json-bool">true</span>,
+  <span class="json-key">"draft"</span>: { <span class="json-cmt">/* cosmetic: theme, colors, emoji */</span> },
+  <span class="json-key">"rules"</span>: { <span class="json-cmt">/* wordLength, hardMode */</span> },
+  <span class="json-key">"dsl"</span>: {
+    <span class="json-key">"triggers"</span>: [
+      {
+        <span class="json-key">"on"</span>: <span class="json-str">"wrongGuess"</span>,
+        <span class="json-key">"conditions"</span>: [
+          { <span class="json-key">"field"</span>: <span class="json-str">"wrongGuessCount"</span>, <span class="json-key">"op"</span>: <span class="json-str">"gte"</span>, <span class="json-key">"value"</span>: <span class="json-num">2</span> }
+        ],
+        <span class="json-key">"actions"</span>: [
+          { <span class="json-key">"type"</span>: <span class="json-str">"setGuessTimer"</span>, <span class="json-key">"params"</span>: { <span class="json-key">"seconds"</span>: <span class="json-num">30</span> } },
+          { <span class="json-key">"type"</span>: <span class="json-str">"addGuesses"</span>,    <span class="json-key">"params"</span>: { <span class="json-key">"count"</span>:   <span class="json-num">1</span> } }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">5</div>
+  <div>
+    <h4>Server validates DSL</h4>
+    <p><code>validateWordleDSL()</code> Gemini ka output server-authoritative re-check karta hai:</p>
+    <ul>
+      <li>Unknown events/fields/actions drop ho jaate hain</li>
+      <li>Numeric params clamp hote hain (timer: 10-120s, count: 1-3)</li>
+      <li>Max 8 triggers, 4 conditions, 3 actions per trigger</li>
+      <li>Even agar Gemini bakwaas bhej de — server safe rahega</li>
+    </ul>
+    <p><strong>File:</strong> <code>functions/src/controllers/wordle_dsl_engine.ts</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">6</div>
+  <div>
+    <h4>Server returns validated payload</h4>
+    <p>Client ko valid JSON wapas milta hai (preview ke liye).</p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">7</div>
+  <div>
+    <h4>Client preview render karta hai</h4>
+    <p>Chat screen mein DSL chip dikhta hai: <code>wrong→⏱timer · wrong→➕guess</code></p>
+    <p><strong>File:</strong> <code>lib/screens/ai_wordle_chat_screen.dart</code> → <code>_DraftPreviewCard</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">8</div>
+  <div>
+    <h4>User "Apply" daba ke variant fork karta hai</h4>
+    <p>Cloud Function <code>forkVariant</code> call hota hai with cosmetic + rules + dsl. Server RTDB pe save karta hai:</p>
+    <pre><code><span class="json-cmt">// /gameLibrary/{newVariantId}/</span>
+{
+  <span class="json-key">"baseGameId"</span>: <span class="json-str">"wordle"</span>,
+  <span class="json-key">"name"</span>:       <span class="json-str">"⚡ Comeback Mode"</span>,
+  <span class="json-key">"creatorUid"</span>: <span class="json-str">"abc123"</span>,
+  <span class="json-key">"cosmetic"</span>:   { <span class="json-cmt">/* ... */</span> },
+  <span class="json-key">"rules"</span>:      { <span class="json-cmt">/* ... */</span> },
+  <span class="json-key">"dsl"</span>: {
+    <span class="json-key">"triggers"</span>: [/* validated triggers */]
+  }
+}</code></pre>
+    <p><strong>File:</strong> <code>functions/src/controllers/game_library.ts</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">9</div>
+  <div>
+    <h4>Variant → Challenge materialization</h4>
+    <p>Game library mein tile dikhega. User tile tap karta hai → <code>WordleVariantPlaySheet</code> bottom sheet khulta hai. User word + hint deta hai → <code>createWordleChallenge</code> call hota hai:</p>
+    <pre><code>{
+  <span class="json-key">"word"</span>:     <span class="json-str">"FLAME"</span>,
+  <span class="json-key">"hint"</span>:     <span class="json-str">"Burns bright"</span>,
+  <span class="json-key">"dsl"</span>:      { <span class="json-cmt">/* inherited from variant */</span> },
+  <span class="json-key">"testMode"</span>: <span class="json-bool">false</span>
+}</code></pre>
+    <p>Server <code>/wordleChallenges/{challengeId}</code> create karta hai with the DSL embedded.</p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">10</div>
+  <div>
+    <h4>Player game open karta hai</h4>
+    <p><code>WordleScreen</code> challenge + dsl receive karta hai. <code>WordleController</code> <code>DSLEngine</code> initialize karta hai.</p>
+    <p><strong>File:</strong> <code>lib/controllers/wordle_controller.dart</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">11</div>
+  <div>
+    <h4>Runtime evaluation</h4>
+    <p>Har event pe engine triggers check karta hai:</p>
+    <pre><code><span class="json-cmt">// Pseudo-code from lib/dsl/game_dsl.dart</span>
+List&lt;DSLAction&gt; evaluate(String event, DSLEvalContext ctx) {
+  final matched = [];
+  for (final trigger in dsl.activeTriggers) {
+    if (trigger.event != event) continue;
+    if (trigger.conditions.every((c) =&gt; c.op.evaluate(ctx.valueOf(c.field), c.value))) {
+      matched.addAll(trigger.actions);
+    }
+  }
+  return matched;
+}</code></pre>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">12</div>
+  <div>
+    <h4>Actions apply hoti hain</h4>
+    <p>Matched actions dispatch hoti hain. UI state update hota hai → timer chip dikhta hai, hint toast aata hai, counter <code>2/7</code> ho jaata hai.</p>
+    <p><strong>File:</strong> <code>lib/controllers/wordle_controller.dart</code> → <code>_applyDslActions()</code></p>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="num">13</div>
+  <div>
+    <h4>Server-side cap enforcement</h4>
+    <p><code>submitWordleGuess</code> bhi DSL replay karta hai server pe — agar player 7th guess submit karta hai aur DSL ne <code>addGuesses: 1</code> set ki hai, to <code>computeEffectiveMaxGuesses()</code> 7 lautata hai aur guess accept hota hai. Cheating-proof.</p>
+    <p><strong>File:</strong> <code>functions/src/controllers/wordle_game.ts</code></p>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="example">6. End-to-End Wordle Example</h2>
+
+<p>Ek complete user journey trace karte hain.</p>
+
+<h3>Setup</h3>
+<p>User Asha apne phone pe yeh prompt likhti hai:</p>
+<blockquote style="border-left:3px solid var(--accent); padding-left:14px; color:var(--mute); font-style:italic;">
+"Galaxy theme with 7-letter words. After 2 wrong guesses give 1 extra guess and reveal hint. 20 second timer per guess."
+</blockquote>
+
+<h3>Gemini Output</h3>
+<pre><code>{
+  <span class="json-key">"reply"</span>: <span class="json-str">"Cosmic 7-letter challenge with comeback mechanics! Ready to fork?"</span>,
+  <span class="json-key">"isReadyToApply"</span>: <span class="json-bool">true</span>,
+  <span class="json-key">"draft"</span>: {
+    <span class="json-key">"displayName"</span>:  <span class="json-str">"🌌 Galaxy Wordle"</span>,
+    <span class="json-key">"bgTheme"</span>:      <span class="json-str">"galaxy"</span>,
+    <span class="json-key">"correctColor"</span>: <span class="json-num">4291348143</span>,  <span class="json-cmt">// purple</span>
+    <span class="json-key">"presentColor"</span>: <span class="json-num">4291347111</span>,  <span class="json-cmt">// gold</span>
+    <span class="json-key">"absentColor"</span>:  <span class="json-num">4280624421</span>,
+    <span class="json-key">"victoryEmoji"</span>: <span class="json-str">"🌟"</span>,
+    <span class="json-key">"failEmoji"</span>:    <span class="json-str">"🌑"</span>
+  },
+  <span class="json-key">"rules"</span>: {
+    <span class="json-key">"wordLength"</span>: <span class="json-num">7</span>,
+    <span class="json-key">"hardMode"</span>:   <span class="json-bool">false</span>
+  },
+  <span class="json-key">"dsl"</span>: {
+    <span class="json-key">"triggers"</span>: [
+      {
+        <span class="json-key">"on"</span>: <span class="json-str">"gameStart"</span>,
+        <span class="json-key">"conditions"</span>: [],
+        <span class="json-key">"actions"</span>: [
+          { <span class="json-key">"type"</span>: <span class="json-str">"setGuessTimer"</span>, <span class="json-key">"params"</span>: { <span class="json-key">"seconds"</span>: <span class="json-num">20</span> } }
+        ]
+      },
+      {
+        <span class="json-key">"on"</span>: <span class="json-str">"wrongGuess"</span>,
+        <span class="json-key">"conditions"</span>: [
+          { <span class="json-key">"field"</span>: <span class="json-str">"wrongGuessCount"</span>, <span class="json-key">"op"</span>: <span class="json-str">"gte"</span>, <span class="json-key">"value"</span>: <span class="json-num">2</span> }
+        ],
+        <span class="json-key">"actions"</span>: [
+          { <span class="json-key">"type"</span>: <span class="json-str">"addGuesses"</span>, <span class="json-key">"params"</span>: { <span class="json-key">"count"</span>: <span class="json-num">1</span> } },
+          { <span class="json-key">"type"</span>: <span class="json-str">"revealHint"</span> }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+
+<h3>Runtime trace</h3>
+<table>
+  <tr><th>Step</th><th>Event</th><th>Context</th><th>Actions fired</th><th>UI effect</th></tr>
+  <tr><td>0</td><td><code>gameStart</code></td><td>—</td><td><code>setGuessTimer(20)</code></td><td>20s countdown chip cyan</td></tr>
+  <tr><td>1</td><td>Guess "PLANT" (wrong)<br><code>wrongGuess</code></td><td>wrongCount=1</td><td>—<br>(1 &gt;= 2 = false)</td><td>Nothing</td></tr>
+  <tr><td>2</td><td>Guess "BREAD" (wrong)<br><code>wrongGuess</code></td><td>wrongCount=2</td><td><code>addGuesses(1)</code><br><code>revealHint</code></td><td>Counter "2/7", "💡 Hint revealed!" toast</td></tr>
+  <tr><td>3</td><td>Guess "GALAXY" (correct)<br><code>correctGuess</code></td><td>wrongCount=2</td><td>—</td><td>🌟 Victory screen</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="files">7. Wordle DSL Migration — Files Created &amp; Modified</h2>
+
+<p>Yeh kya kya banaya / change kiya Wordle ko DSL approach pe migrate karne ke liye.</p>
+
+<h3>🆕 Created (6 new files)</h3>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>lib/dsl/game_dsl.dart</code></td><td>Generic types: <code>GameDSL</code>, <code>DSLTrigger</code>, <code>DSLAction</code>, <code>DSLEngine</code></td></tr>
+  <tr><td><code>lib/dsl/dsl_spec.dart</code></td><td>Per-game spec registry (<code>DSLGameSpec</code>)</td></tr>
+  <tr><td><code>lib/dsl/widgets/dsl_status_chips.dart</code></td><td>Reusable UI: <code>DslCountdownChip</code>, <code>DslBadge</code>, <code>showDslToast()</code></td></tr>
+  <tr><td><code>lib/models/wordle_dsl.dart</code></td><td>Wordle-specific spec instance + constants</td></tr>
+  <tr><td><code>functions/src/controllers/wordle_dsl_engine.ts</code></td><td>Server-side engine + Gemini schema + validator</td></tr>
+  <tr><td><code>lib/widgets/discover/wordle_variant_play_sheet.dart</code></td><td>Variant → Challenge bottom sheet</td></tr>
+</table>
+
+<h3>✏️ Modified (16 files)</h3>
+<table>
+  <tr><th>File</th><th>Kya change hua</th></tr>
+  <tr><td><code>functions/src/controllers/cosmetic_schemas.ts</code></td><td>Added <code>dslSchema</code> + <code>validateDsl</code> to <code>GameCosmeticSpec</code></td></tr>
+  <tr><td><code>functions/src/controllers/cosmetics_chat.ts</code></td><td>DSL ko combined Gemini schema mein include kiya</td></tr>
+  <tr><td><code>functions/src/controllers/game_library.ts</code></td><td><code>forkVariant</code>/<code>updateVariant</code> mein DSL accept + store</td></tr>
+  <tr><td><code>functions/src/controllers/wordle_game.ts</code></td><td><code>testMode</code> support, DSL-aware <code>MAX_GUESSES</code>, DSL on challenge</td></tr>
+  <tr><td><code>lib/models/game_library_entry.dart</code></td><td><code>dslRaw</code> field + <code>wordleDsl</code> getter</td></tr>
+  <tr><td><code>lib/models/wordle_challenge_model.dart</code></td><td><code>dsl</code> field on challenge model</td></tr>
+  <tr><td><code>lib/services/wordle_cosmetic_service.dart</code></td><td><code>dsl</code> param in chat/fork/update</td></tr>
+  <tr><td><code>lib/services/wordle_service.dart</code></td><td><code>dsl</code> + <code>testMode</code> params in <code>createChallenge</code></td></tr>
+  <tr><td><code>lib/state/wordle_game_state.dart</code></td><td>4 new fields: <code>extraGuesses</code>, <code>guessTimerSec</code>, <code>hintsGiven</code>, <code>pendingHint</code></td></tr>
+  <tr><td><code>lib/controllers/wordle_controller.dart</code></td><td>DSL engine integration, <code>_applyDslActions()</code>, <code>onTimerExpiry()</code></td></tr>
+  <tr><td><code>lib/screens/wordle_screen.dart</code></td><td>Timer chip render, hint toast, DSL param</td></tr>
+  <tr><td><code>lib/screens/ai_wordle_chat_screen.dart</code></td><td>DSL preview chip, "🎮 Test" button, full flow</td></tr>
+  <tr><td><code>lib/screens/community_games_screen.dart</code></td><td>Pass DSL to WordleScreen</td></tr>
+  <tr><td><code>lib/screens/wordle_challenges_screen.dart</code></td><td>Pass DSL to WordleScreen</td></tr>
+  <tr><td><code>lib/screens/play_screen.dart</code></td><td>Wordle tile tap → variant play sheet</td></tr>
+  <tr><td><code>lib/widgets/tiles/tile_router.dart</code></td><td>Pass DSL to WordleScreen</td></tr>
+</table>
+
+<p><strong>Total:</strong> 6 new + 16 modified = <strong>22 files</strong></p>
+
+
+<!-- ============================================================ -->
+<h2 id="db">8. Database Structure</h2>
+
+<p>RTDB mein 2 alag paths pe DSL store hoti hai — variant template pe (reusable) aur live challenge pe (playable).</p>
+
+<h3>8a. <code>/gameLibrary/{variantId}</code> — Variant Template</h3>
+<pre><code>{
+  <span class="json-key">"baseGameId"</span>:  <span class="json-str">"wordle"</span>,
+  <span class="json-key">"name"</span>:        <span class="json-str">"🌌 Galaxy Wordle"</span>,
+  <span class="json-key">"creatorUid"</span>:  <span class="json-str">"user_abc"</span>,
+  <span class="json-key">"creatorName"</span>: <span class="json-str">"Asha"</span>,
+  <span class="json-key">"createdAt"</span>:   <span class="json-num">1741234567890</span>,
+  <span class="json-key">"description"</span>: <span class="json-str">"Galaxy theme with comeback bonus"</span>,
+  <span class="json-key">"cosmetic"</span>: {
+    <span class="json-key">"bgTheme"</span>: <span class="json-str">"galaxy"</span>,
+    <span class="json-key">"correctColor"</span>: <span class="json-num">4291348143</span>,
+    <span class="json-cmt">// ... more cosmetic fields</span>
+  },
+  <span class="json-key">"rules"</span>: {
+    <span class="json-key">"wordLength"</span>: <span class="json-num">7</span>,
+    <span class="json-key">"hardMode"</span>: <span class="json-bool">false</span>
+  },
+  <span class="json-key">"dsl"</span>: {                              <span class="json-cmt">// ← DSL blob</span>
+    <span class="json-key">"triggers"</span>: [/* … */]
+  }
+}</code></pre>
+
+<h3>8b. <code>/wordleChallenges/{challengeId}</code> — Live Playable Challenge</h3>
+<pre><code>{
+  <span class="json-key">"creatorUid"</span>:  <span class="json-str">"user_abc"</span>,
+  <span class="json-key">"creatorName"</span>: <span class="json-str">"Asha"</span>,
+  <span class="json-key">"word"</span>:        <span class="json-str">"GALAXY"</span>,           <span class="json-cmt">// Server-only, never sent to client</span>
+  <span class="json-key">"wordLength"</span>:  <span class="json-num">7</span>,
+  <span class="json-key">"hint"</span>:        <span class="json-str">"Spiral system of stars"</span>,
+  <span class="json-key">"status"</span>:      <span class="json-str">"active"</span>,
+  <span class="json-key">"createdAt"</span>:   <span class="json-num">1741234567890</span>,
+  <span class="json-key">"expiresAt"</span>:   <span class="json-num">1741320967890</span>,
+  <span class="json-key">"testMode"</span>:    <span class="json-bool">false</span>,
+  <span class="json-key">"dsl"</span>: {                              <span class="json-cmt">// ← Inherited from variant</span>
+    <span class="json-key">"triggers"</span>: [/* … */]
+  },
+  <span class="json-key">"players"</span>: {
+    <span class="json-str">"user_xyz"</span>: {
+      <span class="json-key">"rows"</span>:    [/* guesses */],
+      <span class="json-key">"solved"</span>:  <span class="json-bool">false</span>,
+      <span class="json-key">"attempts"</span>: <span class="json-num">3</span>
+    }
+  }
+}</code></pre>
+
+<div class="callout">
+  <strong>Tip:</strong> Variant template pe DSL ek "recipe" hai. Challenge pe DSL "execution copy" hai — agar baad mein variant edit hota hai, existing challenges purani DSL hi use karte hain (immutable). Naya challenge banane par fresh DSL inherit hoti hai.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="client">9. Client-Side Rendering — Code Walkthrough</h2>
+
+<h3>9a. DSL JSON → Dart objects</h3>
+<p><code>WordleChallengeModel.fromMap()</code> mein:</p>
+<pre><code>final rawDsl = map[<span class="json-str">'dsl'</span>];
+final dsl = rawDsl is Map
+    ? WordleDSL.fromMap(Map&lt;dynamic, dynamic&gt;.from(rawDsl))
+    : null;</code></pre>
+
+<h3>9b. Controller initialize karta hai engine</h3>
+<p><code>WordleController.init()</code> mein:</p>
+<pre><code>if (dsl != null &amp;&amp; dsl!.isNotEmpty) {
+  _engine = DSLEngine(dsl!);
+  <span class="json-cmt">// Apply gameStart triggers immediately</span>
+  _applyDslActions(_engine!.evaluate(WordleEvents.gameStart, _dslContext()));
+}</code></pre>
+
+<h3>9c. Event-time evaluation</h3>
+<p>Har guess submit ke baad:</p>
+<pre><code>if (_engine != null &amp;&amp; phase == WordlePhase.playing) {
+  final event = isCorrect ? WordleEvents.correctGuess : WordleEvents.wrongGuess;
+  _applyDslActions(_engine!.evaluate(event, _dslContext()));
+  _applyDslActions(_engine!.evaluate(WordleEvents.guessSubmit, _dslContext()));
+}</code></pre>
+
+<h3>9d. Action dispatch</h3>
+<pre><code>void _applyDslActions(List&lt;DSLAction&gt; actions) {
+  var s = gameState.value;
+  for (final a in actions) {
+    switch (a.type) {
+      case WordleActions.addGuesses:
+        s = s.copyWith(extraGuesses: s.extraGuesses + count);
+      case WordleActions.setGuessTimer:
+        s = s.copyWith(guessTimerSec: secs);
+      case WordleActions.revealHint:
+        s = s.copyWith(hintsGiven: s.hintsGiven + 1, pendingHint: true);
+      case WordleActions.skipGuess:
+        s = s.copyWith(currentInput: <span class="json-str">''</span>);
+      case WordleActions.endGame:
+        s = s.copyWith(phase: outcome == <span class="json-str">'win'</span>
+            ? WordlePhase.won : WordlePhase.lost);
+    }
+  }
+  gameState.value = s;
+}</code></pre>
+
+<h3>9e. UI reflects state</h3>
+<p><code>WordleScreen</code> <code>ValueListenableBuilder</code> use karke <code>gameState</code> watch karta hai. Jab state change hoti hai:</p>
+<ul>
+  <li><code>state.guessTimerSec != null</code> → cyan <code>DslCountdownChip</code> render</li>
+  <li><code>state.pendingHint == true</code> → <code>showDslToast()</code> "💡 Hint revealed!"</li>
+  <li><code>state.maxGuesses</code> = <code>6 + extraGuesses</code> → counter updates "2/7"</li>
+  <li><code>state.phase</code> change → win/lose overlay</li>
+</ul>
+
+
+<!-- ============================================================ -->
+<h2 id="future-migration">10. Future Game Migration — Step by Step</h2>
+
+<p>Maan lo Ship Fight ko bhi DSL pe migrate karna hai. Kitna kaam lagega?</p>
+
+<h3>Required files</h3>
+<table>
+  <tr><th>File</th><th>Type</th><th>Kya likhna hai</th></tr>
+  <tr><td><code>lib/models/ship_fight_dsl.dart</code></td><td>🆕 New</td><td>Game ka spec:<br>• Event constants (<code>ShipFightEvents.turnStart</code>, etc.)<br>• Field constants<br>• Action constants<br>• <code>shipFightDslSpec</code> instance<br>• <code>ShipFightEvalContext</code></td></tr>
+  <tr><td><code>functions/src/controllers/ship_fight_dsl_engine.ts</code></td><td>🆕 New</td><td>Mirror server side:<br>• Same event/action/field strings<br>• Gemini schema<br>• <code>validateShipFightDSL()</code></td></tr>
+  <tr><td><code>functions/src/controllers/cosmetic_schemas.ts</code></td><td>✏️ Modify</td><td>Ship Fight spec ko <code>dslSchema</code> + <code>validateDsl</code> add karo</td></tr>
+  <tr><td><code>lib/controllers/ship_fight_controller.dart</code></td><td>✏️ Modify</td><td><code>DSLEngine</code> instantiate karo, har event pe <code>evaluate()</code> call, <code>_applyDslActions()</code> add</td></tr>
+  <tr><td><code>lib/state/ship_fight_state.dart</code></td><td>✏️ Modify</td><td>DSL-driven state fields add</td></tr>
+  <tr><td><code>lib/screens/ship_fight_screen.dart</code></td><td>✏️ Modify</td><td>Generic <code>DslCountdownChip</code> + <code>showDslToast()</code> use</td></tr>
+</table>
+
+<h3>Generic core <strong>untouched</strong> rehta hai!</h3>
+<p>Yeh files koi modification nahi chahiye:</p>
+<ul>
+  <li><code>lib/dsl/game_dsl.dart</code></li>
+  <li><code>lib/dsl/dsl_spec.dart</code></li>
+  <li><code>lib/dsl/widgets/dsl_status_chips.dart</code></li>
+  <li><code>functions/src/controllers/cosmetics_chat.ts</code></li>
+  <li><code>functions/src/controllers/game_library.ts</code></li>
+</ul>
+
+<h3>Conceptual Ship Fight DSL example</h3>
+<pre><code><span class="json-cmt">// lib/models/ship_fight_dsl.dart (sketch)</span>
+class ShipFightEvents {
+  static const turnStart       = <span class="json-str">'turnStart'</span>;
+  static const shipMove        = <span class="json-str">'shipMove'</span>;
+  static const shipDestroyed   = <span class="json-str">'shipDestroyed'</span>;
+  static const playerHit       = <span class="json-str">'playerHit'</span>;
+}
+
+class ShipFightFields {
+  static const turnsElapsed    = <span class="json-str">'turnsElapsed'</span>;
+  static const shipsAlive      = <span class="json-str">'shipsAlive'</span>;
+  static const myHp             = <span class="json-str">'myHp'</span>;
+}
+
+class ShipFightActions {
+  static const damageShip      = <span class="json-str">'damageShip'</span>;
+  static const healShip        = <span class="json-str">'healShip'</span>;
+  static const spawnPickup     = <span class="json-str">'spawnPickup'</span>;
+  static const skipTurn        = <span class="json-str">'skipTurn'</span>;
+}</code></pre>
+
+<p>Phir ek <code>shipFightDslSpec</code> instance bana ke <code>cosmetic_schemas.ts</code> mein register kar do. <strong>Bas. Engine, validation, widgets, AI chat pipeline — sab automatically kaam karega.</strong></p>
+
+<div class="callout">
+  <strong>Estimated effort per game:</strong> 2-3 hours for the spec + integration, vs ~22 files / 2-3 days for Wordle's first migration. Generic core pay off karta hai second game se.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="extend">11. Naye Parameters Add Karna</h2>
+
+<p>Future mein DSL ko aur powerful banane ke liye yeh sab add ho sakta hai:</p>
+
+<h3>11a. Naye actions add karna</h3>
+<p>Maan lo "screen shake on wrong guess" feature chahiye. Steps:</p>
+<ol>
+  <li><code>WordleActions</code> mein <code>shakeScreen</code> constant add karo</li>
+  <li><code>wordleDslSpec.actionTypes</code> mein add</li>
+  <li><code>wordleDslSpec.actionChip</code> mein <code>"🌀shake"</code> label add</li>
+  <li>Server side <code>wordle_dsl_engine.ts</code> mein <code>DSL_ACTION_TYPES</code> array mein add</li>
+  <li>Server <code>ACTION_PARAM_RANGES</code> mein <code>shakeScreen: { intensity: [1, 3, 2] }</code> add</li>
+  <li>Client <code>WordleController._applyDslActions()</code> mein case add karo</li>
+  <li>Done — AI iska use kar sakti hai prompts mein</li>
+</ol>
+
+<h3>11b. Naye events add karna</h3>
+<p>Maan lo "doubleVowel" event chahiye (jab guess mein 2 vowels ek saath ho). Steps:</p>
+<ol>
+  <li><code>WordleEvents.doubleVowel</code> constant</li>
+  <li><code>wordleDslSpec.events</code> set mein add</li>
+  <li><code>WordleController.submitGuess()</code> mein detection logic + <code>_engine.evaluate(WordleEvents.doubleVowel, ...)</code></li>
+  <li>Server schema mein <code>DSL_EVENTS</code> mein add</li>
+</ol>
+
+<h3>11c. Naye condition fields add karna</h3>
+<p>Maan lo "lettersGuessedCorrectly" track karna chahiye:</p>
+<ol>
+  <li><code>WordleConditionFields.lettersGuessedCorrectly</code> constant</li>
+  <li><code>WordleEvalContext</code> mein numeric field + <code>valueOf()</code> case</li>
+  <li><code>wordleDslSpec.conditionFields</code> set mein add</li>
+  <li>Server <code>DSL_CONDITION_FIELDS</code> mein add</li>
+</ol>
+
+<h3>11d. Future-friendly extensions</h3>
+<table>
+  <tr><th>Extension</th><th>Effort</th><th>Impact</th></tr>
+  <tr><td>Sound effects (<code>playSound</code> action)</td><td>Small</td><td>Variants ko expressive banata hai</td></tr>
+  <tr><td>Haptic feedback (<code>vibrate</code> action)</td><td>Small</td><td>Touch feel improve</td></tr>
+  <tr><td>Confetti / visual effects</td><td>Medium</td><td>Celebration triggers</td></tr>
+  <tr><td>Time-based conditions (<code>elapsedSec</code>)</td><td>Medium</td><td>"15 sec mein guess nahi diya to..."</td></tr>
+  <tr><td>Random conditions (<code>random &lt; 0.3</code>)</td><td>Medium</td><td>Lucky drops</td></tr>
+  <tr><td>String/letter conditions</td><td>Large</td><td>"agar guess mein 'A' ho..."</td></tr>
+  <tr><td>Multi-trigger chains</td><td>Large</td><td>Cascading rules</td></tr>
+  <tr><td>Cross-event state (custom counters)</td><td>Large</td><td>"streak counter", "combo meter"</td></tr>
+  <tr><td>Letter reveal action (server-side)</td><td>Large</td><td>Actual board letter reveal</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="impossible">12. Impossible Game Banane Pe Kya Hota Hai?</h2>
+
+<p>Agar user kuch aisa prompt deta hai jo DSL support nahi karta — to system gracefully handle karta hai. Validation 3 layers pe hoti hai.</p>
+
+<h3>Layer 1: Gemini Schema (AI ka boundary)</h3>
+<p>Gemini ko <code>responseSchema</code> ke through forced structured output milta hai. Schema mein sirf valid event/action/field names hain. Gemini physically galat enum value nahi de sakti.</p>
+
+<div class="callout warn">
+  <strong>Example:</strong> User bole — "After 2 wrong guesses, add tomato sauce". Gemini reply mein <code>reply: "Sorry, I can't add sauce to Wordle :)"</code> dega aur DSL mein wahi pre-defined actions mein se nearest match (probably no trigger or <code>revealHint</code>) generate karega.
+</div>
+
+<h3>Layer 2: Server Validation (<code>validateWordleDSL</code>)</h3>
+<p>Even agar Gemini somehow weird JSON bhej de — server filter karta hai:</p>
+<pre><code><span class="json-cmt">// Pseudo from wordle_dsl_engine.ts</span>
+function validateTrigger(raw) {
+  if (!DSL_EVENTS.includes(raw.on)) return null;     <span class="json-cmt">// drop unknown event</span>
+  conditions = (raw.conditions || [])
+    .map(validateCondition)
+    .filter(c =&gt; c !== null);                       <span class="json-cmt">// drop bad fields/ops</span>
+  actions = (raw.actions || [])
+    .map(validateAction)
+    .filter(a =&gt; a !== null);                       <span class="json-cmt">// drop bad action types</span>
+  if (actions.length === 0) return null;             <span class="json-cmt">// no-op trigger discarded</span>
+  return { on, conditions, actions };
+}</code></pre>
+<p>Result: invalid triggers <strong>silently drop</strong> ho jaate hain. User ko ek partial DSL milti hai jo valid hi hai.</p>
+
+<h3>Layer 3: Client Engine</h3>
+<p>Client side <code>WordleController._applyDslActions()</code> mein <code>default</code> case hai jo unknown action types pe <code>break</code> karta hai — koi crash nahi.</p>
+
+<h3>Examples of impossible prompts &amp; system response</h3>
+<table>
+  <tr><th>User prompt</th><th>System ka response</th></tr>
+  <tr><td>"Add 10 extra guesses"</td><td>Clamp: count 1-3 hi allowed. AI shayad <code>count: 3</code> generate karega.</td></tr>
+  <tr><td>"500 second timer"</td><td>Clamp: seconds 10-120. Final value: 120.</td></tr>
+  <tr><td>"After 20 wrong guesses end game"</td><td>Condition value capped at 100 (sanity). Trigger valid but kabhi fire nahi hoga.</td></tr>
+  <tr><td>"Change tile colors to blue mid-game"</td><td>No matching action. Gemini reply explanation deta hai, DSL trigger generate nahi hota.</td></tr>
+  <tr><td>"Play music when user is offline"</td><td>No matching event/action. Empty DSL ya sirf reply text.</td></tr>
+  <tr><td>"Game pe pizza order karo"</td><td>Reply mein refusal, DSL empty.</td></tr>
+  <tr><td>"100 triggers ek saath"</td><td>Max 8 triggers — extras dropped.</td></tr>
+</table>
+
+<div class="callout">
+  <strong>Architecturally important:</strong> System NEVER crashes on bad input. Worst case = empty DSL = base Wordle gameplay. Best case = AI partial implementation. User ko hamesha kuchh playable milta hai.
+</div>
+
+
+<!-- ============================================================ -->
+<h2 id="limits">13. Current Parameter Limits</h2>
+
+<table>
+  <tr><th>Parameter</th><th>Limit</th><th>Reason</th></tr>
+  <tr><td>Total triggers per DSL</td><td>8</td><td>Spam prevention</td></tr>
+  <tr><td>Conditions per trigger</td><td>4</td><td>Complexity control</td></tr>
+  <tr><td>Actions per trigger</td><td>3</td><td>Side-effect control</td></tr>
+  <tr><td>Condition <code>value</code></td><td>0-100</td><td>Sanity bounds</td></tr>
+  <tr><td><code>revealHint.count</code></td><td>1-3 (default 1)</td><td>Game balance</td></tr>
+  <tr><td><code>addGuesses.count</code></td><td>1-3 (default 1)</td><td>Per-trigger cap</td></tr>
+  <tr><td><code>setGuessTimer.seconds</code></td><td>10-120 (default 45)</td><td>Playability</td></tr>
+  <tr><td>Server absolute max guesses</td><td>12</td><td>Cumulative DSL cap</td></tr>
+  <tr><td>Word length</td><td>3-12</td><td>Wordle base</td></tr>
+  <tr><td>Active challenges per user</td><td>3 (testMode ignored)</td><td>Anti-spam</td></tr>
+  <tr><td>Challenge duration</td><td>24 hours</td><td>Auto-expire</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<h2 id="summary">14. Final Summary</h2>
+
+<h3>Possible aaj — End to end</h3>
+<ul>
+  <li>✅ AI chat se cosmetic + rules + DSL ek prompt mein design</li>
+  <li>✅ Variant fork to game library</li>
+  <li>✅ Variant → playable challenge (Test mode ya Public)</li>
+  <li>✅ Timer, extra guesses, hints — sab live gameplay mein fire</li>
+  <li>✅ Server-side DSL enforcement (timer, addGuesses)</li>
+  <li>✅ Multi-player support (challenge feed)</li>
+  <li>✅ Universal client widgets (timer chip, toasts) reusable</li>
+</ul>
+
+<h3>Possible nahi (limitations)</h3>
+<ul>
+  <li>❌ Real letter reveal on board (only toast)</li>
+  <li>❌ Server-side <code>skipGuess</code>, <code>endGame</code> enforcement</li>
+  <li>❌ Mid-game cosmetic change via DSL</li>
+  <li>❌ Sound/haptic actions</li>
+  <li>❌ String/random/time-based conditions</li>
+  <li>❌ Custom counters / cross-event state</li>
+</ul>
+
+<h3>One-line takeaway</h3>
+<div class="callout">
+  <strong>Wordle DSL ek mini rule-engine hai — JSON likh ke gameplay behavior define karo, AI generate karta hai, server validate karta hai, client interpret karke runtime pe execute karta hai. Naya behaviour = naya prompt. App update kabhi nahi chahiye.</strong>
+</div>
+
+</main>
+</div>
+</body>
+</html>
